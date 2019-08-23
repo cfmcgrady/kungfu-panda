@@ -1,0 +1,40 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.panda</groupId>
+        <artifactId>kungfu-panda</artifactId>
+        <version>1.0</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>kungfu-panda-examples-yarn</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <build.lib.path>${project.parent.basedir}/libs</build.lib.path>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.panda</groupId>
+            <artifactId>kungfu-panda-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.binary.version}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cloud.fchen</groupId>
+            <artifactId>spark-extensions-core_${spark.version}</artifactId>
+            <version>1.0</version>
+        </dependency>
+    </dependencies>
+
+</project>
