@@ -1,5 +1,9 @@
 package org.panda.example.local
 
+import java.io.{BufferedInputStream, File, FileOutputStream, IOException}
+import java.nio.file.{FileSystem, FileSystems, Files, Paths}
+import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
+
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.panda.PandasFunctionManager
 import org.apache.spark.sql.types.{ArrayType, DataType, IntegerType, StringType}
@@ -9,6 +13,11 @@ import org.apache.spark.sql.types.{ArrayType, DataType, IntegerType, StringType}
  */
 object Test{
   def main(args: Array[String]): Unit = {
+//    test()
+//    unzip("/tmp/test/a.zip", "/tmp/test/dd", true)
+  }
+
+  def run {
     // scalastyle:off println
     val spark = SparkSession
       .builder()
@@ -39,4 +48,6 @@ object Test{
 
 
   }
+
+
 }
