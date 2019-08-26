@@ -30,10 +30,17 @@
         <scala.version>2.11.8</scala.version>
         <build.lib.path>${project.basedir}/libs</build.lib.path>
         <spark.version>2.4.3</spark.version>
+        <spark.scope>provided</spark.scope>
         <skipTests>true</skipTests>
     </properties>
 
     <profiles>
+        <profile>
+            <id>local</id>
+            <properties>
+                <spark.scope>compile</spark.scope>
+            </properties>
+        </profile>
         <profile>
             <id>single-jar</id>
             <build>
@@ -229,11 +236,13 @@
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-core_${scala.binary.version}</artifactId>
                 <version>${spark.version}</version>
+                <scope>${spark.scope}</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-sql_${scala.binary.version}</artifactId>
                 <version>${spark.version}</version>
+                <scope>${spark.scope}</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

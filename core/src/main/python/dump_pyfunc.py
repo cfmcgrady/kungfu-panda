@@ -1,10 +1,6 @@
 import sys;
 from pyspark.sql.types import StringType;
 from pyspark.serializers import CloudPickleSerializer;
-print('===========')
-print(len(sys.argv))
-print(str(sys.argv))
-print('===========')
 f = open(sys.argv[1], 'wb');
 
 from pyspark.files import SparkFiles
@@ -18,11 +14,12 @@ archive_path = sys.argv[3]
 
 def predict(*args):
     import pandas
+    from mlflow.pyfunc.spark_model_cache import SparkModelCache
+    from mlflow.pyfunc import load_pyfunc  # pylint: disable=cyclic-import
     # elem_type = IntegerType
     elem_type = return_type
-    from mlflow.pyfunc import load_pyfunc  # pylint: disable=cyclic-import
-    local_path = SparkFiles.get(archive_path)
-    model = load_pyfunc(archive_path)
+    model = SparkModelCache.get_or_load(archive_path)
+    # model = load_pyfunc(archive_path)
     schema = {str(i): arg for i, arg in enumerate(args)}
     # Explicitly pass order of columns to avoid lexicographic ordering (i.e., 10 < 2)
     columns = [str(i) for i, _ in enumerate(args)]

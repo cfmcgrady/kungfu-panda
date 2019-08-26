@@ -30,11 +30,11 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
         </dependency>
-        <dependency>
-            <groupId>cloud.fchen</groupId>
-            <artifactId>spark-extensions-core_${spark.version}</artifactId>
-            <version>1.0</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>cloud.fchen</groupId>-->
+<!--            <artifactId>spark-extensions-core_${spark.version}</artifactId>-->
+<!--            <version>1.0</version>-->
+<!--        </dependency>-->
     </dependencies>
 
 </project>

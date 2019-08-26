@@ -2,7 +2,9 @@ package org.apache.spark.sql.panda
 
 import java.io.File
 
+import org.apache.spark.panda.utils.ZipCompress
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.util.Utils
 
 /**
  * @time 2019-08-22 14:08
@@ -12,7 +14,10 @@ object SparkModelCache {
 
   def addLocalModel(sparkSession: SparkSession,
                     modelPath: String): String = {
-    sparkSession.sparkContext.addFile(modelPath, true)
+
+    val modelZipPath = Utils.createTempDir().getPath + File.separator + "model.zip"
+    ZipCompress.zip(modelPath, modelZipPath)
+    sparkSession.sparkContext.addFile(modelZipPath)
 
 //    val file = new File(modelPath)
 //
@@ -22,7 +27,8 @@ object SparkModelCache {
 //    )
 //    file.getName
     // return modelPath if we run spark in local mode.
-    modelPath
+//    modelPath
+    modelZipPath
   }
 
 }

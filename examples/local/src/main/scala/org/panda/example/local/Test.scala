@@ -1,7 +1,6 @@
 package org.panda.example.local
 
 import java.io.{BufferedInputStream, File, FileOutputStream, IOException}
-import java.nio.file.{FileSystem, FileSystems, Files, Paths}
 import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
 
 import org.apache.spark.sql.SparkSession
@@ -15,6 +14,8 @@ object Test{
   def main(args: Array[String]): Unit = {
 //    test()
 //    unzip("/tmp/test/a.zip", "/tmp/test/dd", true)
+    run
+//    PandasFunctionManager.a
   }
 
   def run {
@@ -34,9 +35,16 @@ object Test{
     println(DataType.fromDDL(s))
 
     val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
+//    val python = "/usr/local/share/anaconda3/envs/pyspark-2.4.3/bin/python"
+    val modelPath = "/Users/fchen/Project/python/mlflow-study/mlruns/0/9c6c59d0f57f40dfbbded01816896687/artifacts/model"
     val pythonExec = Option(python)
-    PandasFunctionManager.registerMLFlowPythonUDF(spark, functionName = "test", "",
-      returnType = Option(IntegerType), pythonExec = pythonExec)
+    PandasFunctionManager.registerMLFlowPythonUDFLocal(
+      spark, "test", modelPath,
+      returnType = Option(IntegerType),
+      driverPythonExec = pythonExec,
+      driverPythonVer = None,
+      pythonExec = pythonExec,
+      pythonVer = None)
 
     spark.sql(
       """
