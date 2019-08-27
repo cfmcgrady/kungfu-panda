@@ -1,6 +1,6 @@
 package org.apache.spark.sql.panda
 
-import java.io.{BufferedReader, File}
+import java.io.File
 import java.nio.file.Files
 
 import scala.sys.process.Process
@@ -18,29 +18,6 @@ import org.apache.spark.util.Utils
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object PandasFunctionManager {
-
-//  def localRegisterMLFlowPythonUDF(spark: SparkSession,
-//                                   functionName: String,
-//                                   runId: String,
-//                                   returnType: Option[DataType],
-//                                   trackingServerUri: Option[String],
-//                                   pythonExec: Option[String] = None,
-//                                   pythonVer: Option[String] = None
-//                                  ): Unit = {
-//    registerMLFlowPythonUDF(spark, functionName, runId, returnType, trackingServerUri, pythonExec,
-//      pythonVer, pythonExec, pythonVer)
-//  }
-//
-//  def localRegisterMLFlowPythonUDF(spark: SparkSession,
-//                                   functionName: String,
-//                                   modelLocalPath: String,
-//                                   returnType: Option[DataType],
-//                                   pythonExec: Option[String] = None,
-//                                   pythonVer: Option[String] = None
-//                                  ): Unit = {
-//    registerMLFlowPythonUDF(spark, functionName, modelLocalPath, returnType, pythonExec,
-//      pythonVer, pythonExec, pythonVer)
-//  }
 
   def registerMLFlowPythonUDF(spark: SparkSession,
                                    functionName: String,
@@ -79,7 +56,7 @@ object PandasFunctionManager {
       funcSerPath, modelPath, returnType.getOrElse(IntegerType),
       driverPythonExec.getOrElse("python")
     )
-    registerPythonUDF(spark, funcSerPath, functionName, pythonExec, pythonVer)
+    registerPythonUDF(spark, funcSerPath, functionName, returnType, pythonExec, pythonVer)
   }
 
   /**
@@ -96,6 +73,7 @@ object PandasFunctionManager {
                        spark: SparkSession,
                        funcDumpPath: String,
                        functionName: String,
+                       returnType: Option[DataType],
                        pythonExec: Option[String],
                        pythonVer: Option[String]
                        ): Unit = {
@@ -116,7 +94,7 @@ object PandasFunctionManager {
         pythonVer = pythonVer.getOrElse("3.6"),
         broadcastVars = List.empty[Broadcast[PythonBroadcast]].asJava,
         accumulator = null),
-      dataType = IntegerType,
+      dataType = returnType.getOrElse(IntegerType),
       pythonEvalType = PythonEvalType.SQL_SCALAR_PANDAS_UDF,
       udfDeterministic = true)
     spark.udf.registerPython(udf.name, udf)
@@ -140,35 +118,6 @@ object PandasFunctionManager {
     println(command.mkString(" "))
     println(Process(
       command, None, "PYTHONPATH" -> PythonUtils.sparkPythonPath
-    )!!)
-  }
-
-  def main(args: Array[String]): Unit = {
-//    val archive_path = "/Users/fchen/Project/python/mlflow-study/mlruns/0/9c6c59d0f57f40dfbbded01816896687/artifacts/model"
-//    val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
-//    getClass.getClassLoader.getResourceAsStream("dump_pyfunc.py")
-//    writeBinaryPythonFunc("/tmp/eeee", archive_path, IntegerType, python)
-//    val pyPath = getClass.getClassLoader.getResource("dump_pyfunc.py").getPath
-//    val s = getClass.getClassLoader.getResourceAsStream("dump_pyfunc.py")
-//    println(IOUtils.toString(s))
-  }
-
-  def a: Unit = {
-    val archive_path = "/Users/fchen/Project/python/mlflow-study/mlruns/0/9c6c59d0f57f40dfbbded01816896687/artifacts/model"
-    val pyPath = getClass.getClassLoader.getResource("dump_pyfunc.py").getPath
-    val s = getClass.getClassLoader.getResourceAsStream("dump_pyfunc.py")
-//    val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
-    val python = "/usr/local/share/anaconda3/envs/pyspark-2.4.3/bin/python"
-    val cmd = IOUtils.toString(s)
-    println(Process(
-      Seq(
-        python,
-        "-c",
-        cmd,
-        "/tmp/dxy",
-        IntegerType.json,
-        archive_path
-      )
     )!!)
   }
 }

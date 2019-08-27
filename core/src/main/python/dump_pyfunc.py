@@ -10,6 +10,7 @@ from pyspark.sql.types import DoubleType, IntegerType, FloatType, LongType, Stri
 from pyspark.sql.types import _parse_datatype_json_string
 
 return_type = _parse_datatype_json_string(sys.argv[2])
+print("function return type: " + str(return_type))
 archive_path = sys.argv[3]
 
 def predict(*args):
@@ -18,6 +19,17 @@ def predict(*args):
     from mlflow.pyfunc import load_pyfunc  # pylint: disable=cyclic-import
     # elem_type = IntegerType
     elem_type = return_type
+
+    if isinstance(elem_type, ArrayType):
+        elem_type = elem_type.elementType
+
+    supported_types = [IntegerType, LongType, FloatType, DoubleType, StringType]
+
+    if not any([isinstance(elem_type, x) for x in supported_types]):
+        raise MlflowException(
+            message="Invalid result_type '{}'. Result type can only be one of or an array of one "
+                    "of the following types types: {}".format(str(elem_type), str(supported_types)),
+            error_code=INVALID_PARAMETER_VALUE)
     model = SparkModelCache.get_or_load(archive_path)
     # model = load_pyfunc(archive_path)
     schema = {str(i): arg for i, arg in enumerate(args)}
@@ -52,7 +64,7 @@ def predict(*args):
     if type(elem_type) == StringType:
         result = result.applymap(str)
 
-    if type(elem_type) == ArrayType:
+    if type(return_type) == ArrayType:
         return pandas.Series([row[1].values for row in result.iterrows()])
     else:
         return result[result.columns[0]]
