@@ -16,17 +16,12 @@ object LightgbmExample {
       .builder()
       .appName("Spark count example")
       .getOrCreate()
-    spark.udf.register("mdata", () => {
-      Array(
-        (1 to 100).map(
-          i =>
-            (Random.nextDouble() * 100).toFloat
-        )
-      )
-    })
+
+    spark.sparkContext.addFile("http://192.168.200.69:8000/lightgbm2.tgz")
+
     // scalastyle:off println
     val python = "/home/chenfu/mlflow/python/bin/python"
-    val pythonExec = Option("lightgbm/lightgbm/bin/python")
+    val pythonExec = Option("lightgbm2/bin/python")
     PandasFunctionManager.registerMLFlowPythonUDFLocal(
       spark, "test",
       "/home/chenfu/mlflow/lgb_mlflow_pyfunc",
@@ -35,6 +30,7 @@ object LightgbmExample {
       pythonExec = pythonExec)
 
     mockData(spark)
+
     val df = spark.sql(
       """
         |select test(*) as result

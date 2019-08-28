@@ -77,11 +77,19 @@ object PandasFunctionManager {
                        pythonExec: Option[String],
                        pythonVer: Option[String]
                        ): Unit = {
+
     val binaryPythonFunc = Files.readAllBytes(new File(funcDumpPath).toPath)
     val pythonFunc = binaryPythonFunc
     val workerEnv = new java.util.HashMap[String, String]()
-    workerEnv.put("PYTHONPATH", pythonExec.getOrElse("python"))
 
+    addPysparkRuntime(spark)
+    workerEnv.put("PYTHONPATH", {
+      if (spark.sparkContext.isLocal) {
+        pythonExec.getOrElse("python")
+      } else {
+        "pyspark.zip:py4j-0.10.7-src.zip"
+      }
+    })
     import scala.collection.JavaConverters._
     val udf = new UserDefinedPythonFunction(
       name = functionName,
@@ -90,7 +98,6 @@ object PandasFunctionManager {
         envVars = workerEnv.clone().asInstanceOf[java.util.Map[String, String]],
         pythonIncludes = List.empty[String].asJava,
         pythonExec = pythonExec.getOrElse("python"),
-//        pythonExec = "mlflow/mlflow/bin/python",
         pythonVer = pythonVer.getOrElse("3.6"),
         broadcastVars = List.empty[Broadcast[PythonBroadcast]].asJava,
         accumulator = null),
@@ -120,4 +127,18 @@ object PandasFunctionManager {
       command, None, "PYTHONPATH" -> PythonUtils.sparkPythonPath
     )!!)
   }
+
+  /**
+   * add pyspark runtime for python work in the executor side.
+   */
+  private def addPysparkRuntime(spark: SparkSession): Unit = {
+    if (!spark.sparkContext.isLocal) {
+      PythonUtils.sparkPythonPath.split(":")
+        .foreach(path => {
+          // TODO:(fchen) check whether these files have already uploaded to spark cache.
+          spark.sparkContext.addFile(path)
+        })
+    }
+  }
+
 }
