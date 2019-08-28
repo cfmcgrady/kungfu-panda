@@ -8,6 +8,7 @@ import scala.sys.process.Process
 import org.apache.commons.io.IOUtils
 import org.apache.spark.api.python.{PythonBroadcast, PythonEvalType, PythonFunction, PythonUtils}
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.panda.utils.Util
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.execution.python.UserDefinedPythonFunction
 import org.apache.spark.sql.types.{DataType, IntegerType}
@@ -20,16 +21,18 @@ import org.apache.spark.util.Utils
 object PandasFunctionManager {
 
   def registerMLFlowPythonUDF(spark: SparkSession,
-                                   functionName: String,
-                                   runId: String,
-                                   returnType: Option[DataType] = None,
-                                   trackingServerUri: Option[String] = None,
-                                   driverPythonExec: Option[String] = None,
-                                   driverPythonVer: Option[String] = None,
-                                   pythonExec: Option[String] = None,
-                                   pythonVer: Option[String] = None
-                                  ): Unit = {
-    val modelLocalPath = downloadArtifactFromUri(trackingServerUri, runId, "")
+                              functionName: String,
+                              returnType: Option[DataType] = None,
+                              trackingServerUri: Option[String] = None,
+                              artifactRoot: Option[String] = None,
+                              runId: String,
+                              driverPythonExec: Option[String] = None,
+                              driverPythonVer: Option[String] = None,
+                              pythonExec: Option[String] = None,
+                              pythonVer: Option[String] = None
+                             ): Unit = {
+
+    val modelLocalPath = downloadArtifactFromUri(trackingServerUri, artifactRoot, runId, "")
 //    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
 //    val funcSerPath = Utils.createTempDir().getPath + File.separator + "dump_func"
 //    writeBinaryPythonFunc(
@@ -37,7 +40,7 @@ object PandasFunctionManager {
 //      driverPythonExec.getOrElse("python")
 //    )
 //    registerPythonUDF(spark, funcSerPath, functionName, pythonExec, pythonVer)
-    registerMLFlowPythonUDF(spark, functionName, modelLocalPath, returnType, driverPythonExec,
+    registerMLFlowPythonUDFLocal(spark, functionName, modelLocalPath, returnType, driverPythonExec,
       driverPythonVer, pythonExec, pythonVer)
   }
 
@@ -63,10 +66,27 @@ object PandasFunctionManager {
    * download mlflow artifact from given uri.
    */
   private def downloadArtifactFromUri(trackingServerUri: Option[String],
+                                      artifactRoot: Option[String],
                                       runId: String,
                                       workDir: String): String = {
-//    "/Users/fchen/Project/python/mlflow-study/mlruns/0/9c6c59d0f57f40dfbbded01816896687/artifacts/model"
-    "/home/chenfu/mlflow/model"
+    if (trackingServerUri.isDefined) {
+      // TODO:(Fchen) find --default-artifact-root from trackingServerUri
+      throw new UnsupportedOperationException()
+    } else if (artifactRoot.isDefined) {
+      val rootURI = Utils.resolveURI(artifactRoot.get)
+      rootURI.getScheme.toLowerCase match {
+        case "file" =>
+          Util.getArtifactByRunId(artifactRoot.get, runId)
+        case "sftp" =>
+          throw new UnsupportedOperationException()
+        case "hdfs" =>
+          throw new UnsupportedOperationException()
+        case _ =>
+          throw new UnsupportedOperationException()
+      }
+    } else {
+      throw new IllegalArgumentException("please input tracking server uri or aritifact root.")
+    }
   }
 
   def registerPythonUDF(

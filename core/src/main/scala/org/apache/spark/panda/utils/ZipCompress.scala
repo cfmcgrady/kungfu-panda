@@ -9,17 +9,12 @@ import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object ZipCompress {
-  def recursiveListFiles(f: File): Array[File] = {
-    val these = f.listFiles
-    these ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
-  }
-
   def zip(sourceDirectory: String, targetZipFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetZipFile))
     val zs = new ZipOutputStream(Files.newOutputStream(p))
     try {
       val sourceDirectoryPath = Paths.get(sourceDirectory)
-      recursiveListFiles(new File(sourceDirectory))
+      Util.recursiveListFiles(new File(sourceDirectory))
         .filter(!_.isDirectory)
         .foreach {
           case file =>
@@ -47,7 +42,7 @@ object ZipCompress {
         val p = fs.getPath(uncompressedDirectory)
         if (Files.exists(p)) {
           //          Files.deleteIfExists(p)
-          val filesInTarget = recursiveListFiles(new File(p.toString))
+          val filesInTarget = Util.recursiveListFiles(new File(p.toString))
           filesInTarget.foreach(f => Files.delete(f.toPath))
           Files.delete(p)
         }

@@ -36,11 +36,15 @@ object Test{
 
     val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
 //    val python = "/usr/local/share/anaconda3/envs/pyspark-2.4.3/bin/python"
-    val modelPath = "/Users/fchen/Project/python/mlflow-study/mlruns/0/9c6c59d0f57f40dfbbded01816896687/artifacts/model"
+    val artifactRoot = "/Users/fchen/Project/python/mlflow-study/mlruns"
+    val runid = "9c6c59d0f57f40dfbbded01816896687"
     val pythonExec = Option(python)
-    PandasFunctionManager.registerMLFlowPythonUDFLocal(
-      spark, "test", modelPath,
+
+    PandasFunctionManager.registerMLFlowPythonUDF(
+      spark, "test",
       returnType = Option(IntegerType),
+      artifactRoot = Option(artifactRoot),
+      runId = runid,
       driverPythonExec = pythonExec,
       driverPythonVer = None,
       pythonExec = pythonExec,
