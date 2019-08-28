@@ -2,7 +2,7 @@ package org.apache.spark.sql.panda
 
 import java.io.File
 
-import org.apache.spark.panda.utils.ZipCompress
+import org.apache.spark.panda.utils.CompressUtil
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.util.Utils
 
@@ -16,7 +16,7 @@ object SparkModelCache {
                     modelPath: String): String = {
 
     val modelZipPath = Utils.createTempDir().getPath + File.separator + "model.zip"
-    ZipCompress.zip(modelPath, modelZipPath)
+    CompressUtil.zip(modelPath, modelZipPath)
     sparkSession.sparkContext.addFile(modelZipPath)
 
 //    val file = new File(modelPath)

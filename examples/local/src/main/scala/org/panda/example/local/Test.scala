@@ -12,10 +12,7 @@ import org.apache.spark.sql.types.{ArrayType, DataType, IntegerType, StringType}
  */
 object Test{
   def main(args: Array[String]): Unit = {
-//    test()
-//    unzip("/tmp/test/a.zip", "/tmp/test/dd", true)
     run
-//    PandasFunctionManager.a
   }
 
   def run {

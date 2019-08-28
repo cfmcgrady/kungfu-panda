@@ -4,11 +4,13 @@ import java.io.{BufferedInputStream, File, FileOutputStream, IOException}
 import java.nio.file.{Files, FileSystems, Paths}
 import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
 
+import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveOutputStream}
+
 /**
  * @time 2019-08-23 12:15
  * @author fchen <cloud.chenfu@gmail.com>
  */
-object ZipCompress {
+object CompressUtil {
   def zip(sourceDirectory: String, targetZipFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetZipFile))
     val zs = new ZipOutputStream(Files.newOutputStream(p))
@@ -25,7 +27,30 @@ object ZipCompress {
             zs.closeEntry()
         }
     } finally {
+      zs.flush()
       zs.close()
+    }
+  }
+
+  def tar(sourceDirectory: String, targetTarFile: String): Unit = {
+    val p = Files.createFile(Paths.get(targetTarFile))
+    val taos = new TarArchiveOutputStream(Files.newOutputStream(p))
+    try {
+      val sourceDirectoryPath = Paths.get(sourceDirectory)
+      Util.recursiveListFiles(new File(sourceDirectory))
+        .filter(!_.isDirectory)
+        .foreach {
+          case file =>
+            val path = file.toPath
+            val tarEntry = new TarArchiveEntry(sourceDirectoryPath.getParent.relativize(path).toString())
+            tarEntry.setSize(file.length())
+            taos.putArchiveEntry(tarEntry)
+            Files.copy(path, taos)
+            taos.closeArchiveEntry()
+        }
+    } finally {
+      taos.flush()
+      taos.close()
     }
   }
 
@@ -89,6 +114,10 @@ object ZipCompress {
     } finally {
       zfile.close()
     }
+  }
+
+  def main(args: Array[String]): Unit = {
+    tar("/tmp/a", "/tmp/dd/dd.tgz")
   }
 
 }
