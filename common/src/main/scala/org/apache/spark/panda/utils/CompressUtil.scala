@@ -5,6 +5,8 @@ import java.nio.file.{Files, FileSystems, Paths}
 import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveOutputStream}
+;
+
 
 /**
  * @time 2019-08-23 12:15
@@ -35,6 +37,7 @@ object CompressUtil {
   def tar(sourceDirectory: String, targetTarFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetTarFile))
     val taos = new TarArchiveOutputStream(Files.newOutputStream(p))
+    taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
     try {
       val sourceDirectoryPath = Paths.get(sourceDirectory)
       Util.recursiveListFiles(new File(sourceDirectory))

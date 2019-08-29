@@ -247,7 +247,9 @@
         </dependencies>
     </dependencyManagement>
     <modules>
+        <module>common</module>
         <module>core</module>
+        <module>bamboo</module>
         <module>examples/local</module>
         <module>examples/yarn</module>
         <module>assembly</module>

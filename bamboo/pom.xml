@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>kungfu-panda-core</artifactId>
+    <artifactId>kungfu-panda-bamboo</artifactId>
     <packaging>jar</packaging>
 
     <properties>
@@ -23,23 +23,10 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_${scala.binary.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.25</version>
         </dependency>
     </dependencies>
-    <build>
-        <resources>
-            <resource>
-                <directory>src/main/python</directory>
-                <includes>
-                    <include>**/*.py</include>
-                </includes>
-            </resource>
-        </resources>
-    </build>
 
 </project>
