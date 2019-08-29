@@ -115,9 +115,4 @@ object CompressUtil {
       zfile.close()
     }
   }
-
-  def main(args: Array[String]): Unit = {
-    tar("/tmp/a", "/tmp/dd/dd.tgz")
-  }
-
 }

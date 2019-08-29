@@ -19,7 +19,7 @@ object Test{
     // scalastyle:off println
     val spark = SparkSession
       .builder()
-      .appName("Spark count example")
+      .appName("local mlflow run example")
       .master("local[4]")
       .getOrCreate()
     println(StringType.json)

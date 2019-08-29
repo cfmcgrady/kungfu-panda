@@ -33,13 +33,6 @@ object PandasFunctionManager {
                              ): Unit = {
 
     val modelLocalPath = downloadArtifactFromUri(trackingServerUri, artifactRoot, runId, "")
-//    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
-//    val funcSerPath = Utils.createTempDir().getPath + File.separator + "dump_func"
-//    writeBinaryPythonFunc(
-//      funcSerPath, modelPath, returnType.getOrElse(IntegerType),
-//      driverPythonExec.getOrElse("python")
-//    )
-//    registerPythonUDF(spark, funcSerPath, functionName, pythonExec, pythonVer)
     registerMLFlowPythonUDFLocal(spark, functionName, modelLocalPath, returnType, driverPythonExec,
       driverPythonVer, pythonExec, pythonVer)
   }
@@ -85,23 +78,25 @@ object PandasFunctionManager {
           throw new UnsupportedOperationException()
       }
     } else {
-      throw new IllegalArgumentException("please input tracking server uri or aritifact root.")
+      throw new IllegalArgumentException("please input tracking server uri or artifact root.")
     }
   }
 
-  def registerPythonUDF(
-                       spark: SparkSession,
-                       funcDumpPath: String,
-                       functionName: String,
-                       returnType: Option[DataType],
-                       pythonExec: Option[String],
-                       pythonVer: Option[String]
-                       ): Unit = {
+  def registerPythonUDF(spark: SparkSession,
+                        funcDumpPath: String,
+                        functionName: String,
+                        returnType: Option[DataType],
+                        pythonExec: Option[String],
+                        pythonVer: Option[String]): Unit = {
 
     val binaryPythonFunc = Files.readAllBytes(new File(funcDumpPath).toPath)
     val pythonFunc = binaryPythonFunc
     val workerEnv = new java.util.HashMap[String, String]()
 
+    // in local run mode, we get pyspark runtime from python environment. but in cluster manager run
+    // mode, we should put pyspark runtime environment (pyspark.zip and py4j.zip) into executor host
+    // and set PYTHONPATH system environment point to pyspark package file path. this action is in
+    // order to reduce the package size of python runtime.
     addPysparkRuntime(spark)
     workerEnv.put("PYTHONPATH", {
       if (spark.sparkContext.isLocal) {
