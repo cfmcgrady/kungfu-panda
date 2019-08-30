@@ -3,10 +3,10 @@ package org.panda.bamboo.util
 import java.io.File
 import java.nio.file.Paths
 import java.util.{Map => JMap}
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.spark.panda.utils.CompressUtil
 
 /**
@@ -14,6 +14,24 @@ import org.apache.spark.panda.utils.CompressUtil
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object CacheManager {
+
+  private val _cache = CacheBuilder.newBuilder()
+    .maximumSize(100)
+    .build(
+      new CacheLoader[CacheKey, CacheEntity] {
+        override def load(k: CacheKey): CacheEntity = {
+          new CacheEntity(k.name, k.conf)
+        }
+      }
+    )
+
+  def get(yaml: String): Unit = {
+    // TODO:(fchen) vilidate the yaml is in legal format.
+    val ymap = Conda.normalize(yaml)
+    _cache.get(
+      CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
+    ).get()
+  }
 
   def main(args: Array[String]): Unit = {
     val yaml =
@@ -30,16 +48,27 @@ object CacheManager {
         |name: conda-test
       """.stripMargin
 
-    val map = Conda.normalize(yaml)
-    val e = new CacheEntity(map.get("name").toString, map)
     (1 to 1000).foreach(i => {
       new Thread(new Runnable {
         override def run(): Unit = {
-          e.get()
+          get(yaml)
         }
       }).start()
     })
-    e.get()
+  }
+}
+
+case class CacheKey(name: String, conf: JMap[String, Object]) {
+  override def hashCode(): Int = {
+    name.hashCode
+  }
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: CacheKey =>
+        that.name == name
+      case _ =>
+        false
+    }
   }
 }
 
