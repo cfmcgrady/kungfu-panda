@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -51,15 +52,18 @@ public class GZIPUtil {
     String entryName = parent + file.getName();
     System.out.println("entryName " + entryName);
     // add tar ArchiveEntry
+
+//    tarEntry.setMode(755)
     tarArchive.putArchiveEntry(new TarArchiveEntry(file, entryName));
-    if(file.isFile()){
-      FileInputStream fis = new FileInputStream(file);
-      BufferedInputStream bis = new BufferedInputStream(fis);
-      // Write file content to archive
-      IOUtils.copy(bis, tarArchive);
+    if(file.isFile()) {
+//      FileInputStream fis = new FileInputStream(file);
+//      BufferedInputStream bis = new BufferedInputStream(fis);
+//      // Write file content to archive
+//      IOUtils.copy(bis, tarArchive);
+      Files.copy(file.toPath(), tarArchive);
       tarArchive.closeArchiveEntry();
-      bis.close();
-    }else if(file.isDirectory()){
+//      bis.close();
+    }else if(file.isDirectory()) {
       // no content to copy so close archive entry
       tarArchive.closeArchiveEntry();
       // if this directory contains more directories and files

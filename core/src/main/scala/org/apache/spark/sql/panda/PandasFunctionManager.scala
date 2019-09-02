@@ -137,7 +137,7 @@ object PandasFunctionManager {
       modelPath)
     // todo
     // scalastyle:off
-    println(command.mkString(" "))
+    //    println(command.mkString(" "))
     println(Process(
       command, None, "PYTHONPATH" -> PythonUtils.sparkPythonPath
     )!!)

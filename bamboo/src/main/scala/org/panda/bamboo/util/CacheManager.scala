@@ -7,7 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.apache.spark.panda.utils.CompressUtil
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.spark.panda.utils.{CompressUtil, Conda}
 
 /**
  * @time 2019-08-29 14:33
@@ -120,8 +121,15 @@ class CacheEntity(name: String,
       // the environment has never been download before, so we download this package now.
       val envpath = Conda.createEnv(name, configuration, basePath + File.separator + name)
 
-      // compress environment
-      CompressUtil.tar2(envpath.toString, s"${envpath}.tgz")
+      // make python command executable.
+      val makeExecutable = {
+        (path: Path, entry: TarArchiveEntry) => {
+          if (path.getFileName.toString.equalsIgnoreCase("python")) {
+            entry.setMode(755)
+          }
+        }
+      }
+      CompressUtil.tar(envpath.toString, s"${envpath}.tgz", makeExecutable)
     }
   }
 

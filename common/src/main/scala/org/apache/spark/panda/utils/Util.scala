@@ -2,6 +2,7 @@ package org.apache.spark.panda.utils
 
 import java.io.File
 import java.nio.file.{Path, Paths}
+import java.security.MessageDigest
 
 /**
  * @time 2019-08-26 13:00
@@ -49,5 +50,13 @@ object Util {
     val these = f.listFiles
     these ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
   }
+
+  def stringToMD5(string: String): String = {
+    MessageDigest.getInstance("MD5")
+      .digest(string.getBytes("UTF-8"))
+      .map("%02x".format(_))
+      .mkString
+  }
+
 
 }

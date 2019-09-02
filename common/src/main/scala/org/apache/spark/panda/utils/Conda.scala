@@ -1,8 +1,7 @@
-package org.panda.bamboo.util
+package org.apache.spark.panda.utils
 
-import java.io.{File, FileOutputStream, FileWriter, PrintWriter, StringWriter}
+import java.io.{File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
-import java.security.MessageDigest
 import java.util.{ArrayList => JArrayList, Map => JMap}
 
 import scala.collection.JavaConverters._
@@ -54,7 +53,7 @@ object Conda {
 
     val total = dep ++ pip
 
-    val nname = stringToMD5(total.sortBy(x => x).mkString(","))
+    val nname = Util.stringToMD5(total.sortBy(x => x).mkString(","))
     info.put("name", nname)
     info
 
@@ -78,13 +77,6 @@ object Conda {
     (dependencies, pip)
   }
 
-  def stringToMD5(string: String): String = {
-    MessageDigest.getInstance("MD5")
-      .digest(string.getBytes("UTF-8"))
-      .map("%02x".format(_))
-      .mkString
-  }
-
   private def writeYaml(conf: JMap[String, Object],
                         filePath: Path): Unit = {
     val yaml = new Yaml()
@@ -104,6 +96,10 @@ object Conda {
   def setProxy(conf: JMap[String, Object]): JMap[String, Object] = {
     // TODO:(fchen) set conda proxy.
     conf
+  }
+
+  def addPyarrow(configurations: JMap[String, Object]): Unit = {
+//    pyarrow==0.12.1
   }
 
 }

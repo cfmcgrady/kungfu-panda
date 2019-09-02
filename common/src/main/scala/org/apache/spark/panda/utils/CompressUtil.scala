@@ -1,14 +1,13 @@
 package org.apache.spark.panda.utils
 
-import java.io.{BufferedInputStream, File, FileInputStream, FileOutputStream, IOException}
-import java.nio.file.{Files, FileSystems, Paths}
-import java.util.zip.{GZIPOutputStream, ZipEntry, ZipFile, ZipOutputStream}
+import java.io.{BufferedInputStream, File, FileOutputStream, IOException}
+import java.nio.file.{Files, FileSystems, Path, Paths}
+import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
 
-import scala.util.control.NonFatal
+import scala.sys.process.Process
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveOutputStream}
-import org.apache.commons.compress.utils.IOUtils
-;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 
 
 /**
@@ -16,10 +15,6 @@ import org.apache.commons.compress.utils.IOUtils
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object CompressUtil {
-
-  def main(args: Array[String]): Unit = {
-    tar("/tmp/a", "/tmp/a.tgz")
-  }
 
   def zip(sourceDirectory: String, targetZipFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetZipFile))
@@ -42,11 +37,15 @@ object CompressUtil {
     }
   }
 
-  def tar(sourceDirectory: String, targetTarFile: String): Unit = {
-    throw new RuntimeException("something wrong with this function.")
+  def tar(sourceDirectory: String,
+          targetTarFile: String,
+          action: (Path, TarArchiveEntry) => Unit = (_, _) => Unit): Unit = {
+//    throw new RuntimeException("something wrong with this function.")
     val p = Files.createFile(Paths.get(targetTarFile))
-    val taos = new TarArchiveOutputStream(Files.newOutputStream(p))
-//    taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
+    val gzipOS = new GzipCompressorOutputStream(Files.newOutputStream(p))
+//    val taos = new TarArchiveOutputStream(Files.newOutputStream(p))
+    val taos = new TarArchiveOutputStream(gzipOS)
+    taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
     try {
       val sourceDirectoryPath = Paths.get(sourceDirectory)
       Util.recursiveListFiles(new File(sourceDirectory))
@@ -56,7 +55,7 @@ object CompressUtil {
           case file =>
             val path = file.toPath
             val tarEntry = new TarArchiveEntry(path.toFile, sourceDirectoryPath.getParent.relativize(path).toString())
-//            tarEntry.setSize(file.length())
+            action(path, tarEntry)
             taos.putArchiveEntry(tarEntry)
 //            val in = new FileInputStream(path.toFile)
             Files.copy(path, taos)
@@ -70,11 +69,19 @@ object CompressUtil {
     finally {
       taos.flush()
       taos.close()
+      gzipOS.flush()
+      gzipOS.close()
     }
   }
 
   def tar2(sourceDirectory: String, targetTarFile: String): Unit = {
     GZIPUtil.createTarArchive(sourceDirectory, targetTarFile)
+  }
+
+  def tar3(): Unit = {
+    Process(
+      "tar czf "
+    )
   }
 
   @throws(classOf[IOException])
