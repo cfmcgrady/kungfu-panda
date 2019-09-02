@@ -18,6 +18,12 @@ import org.springframework.web.bind.annotation.{PathVariable, RequestBody, Reque
 @RequestMapping(value = Array("/api/v1/conda"))
 class CondaController {
 
+  /**
+   * post method for createAndGet.
+   * @param yaml
+   * @param request
+   * @return
+   */
   @RequestMapping(value = Array("/createAndGet"), method = Array(RequestMethod.POST))
   def createAndGet(@RequestBody yaml: String, request: HttpServletRequest): ResponseEntity[Resource] = {
 
@@ -47,12 +53,26 @@ class CondaController {
       .body(resource)
   }
 
+  /**
+   * get method for createAndGet.different from post method, in get method you should encode conda
+   * configurations by base64.
+   * @param yaml
+   * @param request
+   * @return
+   */
   @RequestMapping(value = Array("/createAndGet"), method = Array(RequestMethod.GET))
   def createAndGet2(@RequestParam yaml: String, request: HttpServletRequest): ResponseEntity[Resource] = {
     val decodeYamlString = new String(Base64.getDecoder.decode(yaml), "utf-8")
     createAndGet(decodeYamlString, request)
   }
 
+  /**
+   * download the environment package by given conda yaml configuration.
+   * @param yaml the base64 code of the conda yaml configurations.
+   * @param filename
+   * @param request
+   * @return
+   */
   @RequestMapping(value = Array("/createAndGet/{yaml}/{filename}"), method = Array(RequestMethod.GET))
   def createAndGet3(@PathVariable yaml: String,
                     @PathVariable filename: String,
@@ -72,6 +92,11 @@ class CondaController {
     }
   }
 
+  /**
+   * direct get environment package by filename.
+   * @param filename the md5 code of this package.
+   * @return
+   */
   @RequestMapping(value = Array("/directGet/{filename}"), method = Array(RequestMethod.GET))
   def directGet(@PathVariable filename: String,
                 request: HttpServletRequest): ResponseEntity[Resource] = {
