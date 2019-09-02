@@ -1,10 +1,13 @@
 package org.apache.spark.panda.utils
 
-import java.io.{BufferedInputStream, File, FileOutputStream, IOException}
+import java.io.{BufferedInputStream, File, FileInputStream, FileOutputStream, IOException}
 import java.nio.file.{Files, FileSystems, Paths}
-import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
+import java.util.zip.{GZIPOutputStream, ZipEntry, ZipFile, ZipOutputStream}
+
+import scala.util.control.NonFatal
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveOutputStream}
+import org.apache.commons.compress.utils.IOUtils
 ;
 
 
@@ -13,6 +16,11 @@ import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveOut
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object CompressUtil {
+
+  def main(args: Array[String]): Unit = {
+    tar("/tmp/a", "/tmp/a.tgz")
+  }
+
   def zip(sourceDirectory: String, targetZipFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetZipFile))
     val zs = new ZipOutputStream(Files.newOutputStream(p))
@@ -35,26 +43,38 @@ object CompressUtil {
   }
 
   def tar(sourceDirectory: String, targetTarFile: String): Unit = {
+    throw new RuntimeException("something wrong with this function.")
     val p = Files.createFile(Paths.get(targetTarFile))
     val taos = new TarArchiveOutputStream(Files.newOutputStream(p))
-    taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
+//    taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
     try {
       val sourceDirectoryPath = Paths.get(sourceDirectory)
       Util.recursiveListFiles(new File(sourceDirectory))
         .filter(!_.isDirectory)
+        .sortBy(x => x.toString)
         .foreach {
           case file =>
             val path = file.toPath
-            val tarEntry = new TarArchiveEntry(sourceDirectoryPath.getParent.relativize(path).toString())
-            tarEntry.setSize(file.length())
+            val tarEntry = new TarArchiveEntry(path.toFile, sourceDirectoryPath.getParent.relativize(path).toString())
+//            tarEntry.setSize(file.length())
             taos.putArchiveEntry(tarEntry)
+//            val in = new FileInputStream(path.toFile)
             Files.copy(path, taos)
+//            IOUtils.copy(in, taos)
             taos.closeArchiveEntry()
         }
-    } finally {
+    } catch {
+      case e: Exception =>
+        throw e
+    }
+    finally {
       taos.flush()
       taos.close()
     }
+  }
+
+  def tar2(sourceDirectory: String, targetTarFile: String): Unit = {
+    GZIPUtil.createTarArchive(sourceDirectory, targetTarFile)
   }
 
   @throws(classOf[IOException])

@@ -14,10 +14,12 @@ object LightgbmExample {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder()
-      .appName("Spark count example")
+      .appName("LightGBM on Yarn Example")
       .getOrCreate()
 
-    spark.sparkContext.addFile("http://192.168.200.69:8000/lightgbm2.tgz")
+    val condaYaml = scala.io.Source.fromFile("/home/chenfu/mlflow/lgb_mlflow_pyfunc/conda.yaml")
+      .getLines()
+      .mkString("\n")
 
     // scalastyle:off println
     val python = "/home/chenfu/mlflow/python/bin/python"

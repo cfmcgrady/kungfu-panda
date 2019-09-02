@@ -1,7 +1,7 @@
 package org.panda.bamboo.util
 
 import java.io.File
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import java.util.{Map => JMap}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -25,13 +25,22 @@ object CacheManager {
       }
     )
 
-  def get(yaml: String): Unit = {
+  def get(yaml: String): String = {
     // TODO:(fchen) vilidate the yaml is in legal format.
     val ymap = Conda.normalize(yaml)
     _cache.get(
       CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
     ).get()
   }
+
+  /**
+   * get the tar archive file path by environment name.
+   */
+  def getFileByName(name: String): Path = {
+    Paths.get(basePath, Array(name, s"${name}.tgz"): _*)
+  }
+
+  val basePath = "/tmp/cache"
 
   def main(args: Array[String]): Unit = {
     val yaml =
@@ -78,7 +87,7 @@ class CacheEntity(name: String,
   private val _lock = new ReentrantReadWriteLock()
   private val _cacheVaild: AtomicBoolean = new AtomicBoolean(false)
 
-  def get(): Unit = {
+  def get(): String = {
 
     _lock.readLock().lock()
     if (!_cacheVaild.get()) {
@@ -87,6 +96,7 @@ class CacheEntity(name: String,
       try {
         if (!_cacheVaild.get()) {
           // do package download
+          // TODO:(fchen) throws execption when we has downloaded fail.
           downloadAndPackage()
           _cacheVaild.set(true)
         }
@@ -97,24 +107,23 @@ class CacheEntity(name: String,
     }
     try {
       // read data
-      println("data prepare is ready!")
+      name
     } finally {
       _lock.readLock().unlock()
     }
   }
 
   private def downloadAndPackage(): Unit = {
+    import CacheManager._
     if (!(Paths.get(basePath, Array(name): _*).toFile.exists() &&
         Paths.get(basePath, Array(name, s"${name}.tgz"): _*).toFile.exists())) {
       // the environment has never been download before, so we download this package now.
       val envpath = Conda.createEnv(name, configuration, basePath + File.separator + name)
 
       // compress environment
-      CompressUtil.tar(envpath.toString, s"${envpath}.tgz")
+      CompressUtil.tar2(envpath.toString, s"${envpath}.tgz")
     }
   }
-
-  private val basePath = "/tmp/cache"
 
   /**
    * .
