@@ -19,7 +19,7 @@ conda env create -f path/to/conda.yaml -p /tmp/kungfu-panda
 ```
 
 4. register model.
-```
+```scala
     val spark = SparkSession
       .builder()
       .appName("kungfu panda example")
