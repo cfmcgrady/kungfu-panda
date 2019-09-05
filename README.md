@@ -49,6 +49,25 @@ conda env create -f path/to/conda.yaml -p /tmp/kungfu-panda
       .show()
 ```
 
+# Register Function With Spark SQL
+
+1. add parser extensions when we create `SparkSession`
+```scala
+val spark = SparkSession
+  .builder()
+  .appName("panda sql example")
+  .master("local[4]")
+  .withExtensions(CreateFunctionParser.extBuilder)
+  .getOrCreate()
+```
+
+2. register mlflow function.
+```sql
+CREATE FUNCTION `test` AS '${runid}' USING `type` 'mlflow', `returns` 'integer', `artifactRoot` '${artifactRoot}', `pythonExec` '${python}'
+```
+
+visit [PandaSqlExample](./examples/local/src/main/scala/org/panda/example/local/PandaSqlExample.scala) for full example.
+
 # Run On Yarn Cluster
 
 // todo
