@@ -23,7 +23,11 @@ object PandaSqlExample {
 
     spark.sql(
       s"""
-        |CREATE FUNCTION `test` AS '${runid}' USING `type` 'mlflow', `returns` 'integer', `artifactRoot` '${artifactRoot}', `pythonExec` '${python}'
+        |CREATE FUNCTION `test` AS '${runid}' USING
+        |  `type` 'mlflow',
+        |  `returns` 'integer',
+        |  `artifactRoot` '${artifactRoot}',
+        |  `pythonExec` '${python}'
       """.stripMargin)
 
     spark.sql(
