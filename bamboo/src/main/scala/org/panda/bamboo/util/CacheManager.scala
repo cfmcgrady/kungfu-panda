@@ -4,6 +4,7 @@ import java.nio.file.{Path, Paths}
 import java.util.{Map => JMap}
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
+import org.apache.juli.logging.LogFactory
 import org.apache.spark.panda.utils.Conda
 
 /**
@@ -11,6 +12,8 @@ import org.apache.spark.panda.utils.Conda
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object CacheManager {
+
+  private val logger = LogFactory.getLog(getClass)
 
   private lazy val _pythonEnvCache = CacheBuilder.newBuilder()
     .maximumSize(100)
@@ -47,20 +50,18 @@ object CacheManager {
       }
     )
 
-//  def get(yaml: String): String = {
-    // TODO:(fchen) vilidate the yaml is in legal format.
-//    val ymap = Conda.normalize(yaml)
-//    _pythonEnvCache.get(
-//      CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
-//    ).get()
-//  }
-
   def get: (Key) => String = {
     key => _cache.get(key).get()
 //    case k: CacheKey =>
 //      _pythonEnvCache.get(k).get()
 //    case k: MLFlowRunCacheKey =>
 //      _mlflowRunCache.get(k).get()
+  }
+
+  def remove: (Key) => Unit = {
+    key =>
+      logger.info(s"start to remove ${key}")
+      _cache.get(key).remove
   }
 
   /**
