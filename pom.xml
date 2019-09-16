@@ -31,7 +31,7 @@
         <build.lib.path>${project.basedir}/libs</build.lib.path>
         <spark.version>2.4.3</spark.version>
         <spark.scope>provided</spark.scope>
-        <skipTests>true</skipTests>
+        <skipTests>false</skipTests>
     </properties>
 
     <profiles>
@@ -221,17 +221,39 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>1.0</version>
+                <!-- Note config is repeated in surefire config -->
+                <configuration>
+                    <skipTests>${skipTests}</skipTests>
+                    <testFailureIgnore>false</testFailureIgnore>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <argLine>-ea -Xmx3g</argLine>
+                    <filereports>WDF TestSuite.txt</filereports>
+                    <stderr/>
+                    <systemProperties>
+                        <log4j.configuration>file:src/test/resources/log4j.properties</log4j.configuration>
+                        <log4j.configurationFile>file:src/test/resources/log4j2.xml</log4j.configurationFile>
+                    </systemProperties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
 
     </build>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.scala-lang</groupId>
-                <artifactId>scala-library</artifactId>
-                <version>${scala.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-core_${scala.binary.version}</artifactId>
@@ -244,8 +266,27 @@
                 <version>${spark.version}</version>
                 <scope>${spark.scope}</scope>
             </dependency>
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-mllib_${scala.binary.version}</artifactId>
+                <version>${spark.version}</version>
+                <scope>${spark.scope}</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>3.0.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
+    </dependencies>
     <modules>
         <module>common</module>
         <module>core</module>

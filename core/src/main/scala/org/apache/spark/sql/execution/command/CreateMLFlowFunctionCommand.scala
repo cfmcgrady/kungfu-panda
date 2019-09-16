@@ -18,16 +18,17 @@ case class CreateMLFlowFunctionCommand(
     replace: Boolean)
   extends RunnableCommand {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val pythonExec = Option(options("pythonexec"))
+    val pythonExec = options.get("pythonexec")
+    val pythonVer = options.get("pythonver")
     PandasFunctionManager.registerMLFlowPythonUDF(
       sparkSession, functionName,
       returnType = Option(DataType.fromDDL(options("returns"))),
       artifactRoot = Option(options("artifactroot")),
       runId = className,
       driverPythonExec = pythonExec,
-      driverPythonVer = None,
+      driverPythonVer = pythonVer,
       pythonExec = pythonExec,
-      pythonVer = None)
+      pythonVer = pythonVer)
     Seq.empty[Row]
   }
 }

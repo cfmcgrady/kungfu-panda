@@ -18,10 +18,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.panda</groupId>
             <artifactId>kungfu-panda-common</artifactId>
             <version>${project.version}</version>
