@@ -1,14 +1,10 @@
 package org.panda.bamboo.util
 
-import java.io.File
 import java.nio.file.{Path, Paths}
 import java.util.{Map => JMap}
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry
-import org.apache.spark.panda.utils.{CompressUtil, Conda}
+import org.apache.spark.panda.utils.Conda
 
 /**
  * @time 2019-08-29 14:33
@@ -16,22 +12,55 @@ import org.apache.spark.panda.utils.{CompressUtil, Conda}
  */
 object CacheManager {
 
-  private val _cache = CacheBuilder.newBuilder()
+  private lazy val _pythonEnvCache = CacheBuilder.newBuilder()
     .maximumSize(100)
     .build(
-      new CacheLoader[CacheKey, CacheEntity] {
-        override def load(k: CacheKey): CacheEntity = {
-          new CacheEntity(k.name, k.conf)
+      new CacheLoader[CacheKey, PythonEnvironmentCacheEntity] {
+        override def load(k: CacheKey): PythonEnvironmentCacheEntity = {
+          new PythonEnvironmentCacheEntity(k.name, k.conf)
         }
       }
     )
 
-  def get(yaml: String): String = {
+  private lazy val _mlflowRunCache = CacheBuilder.newBuilder()
+    .maximumSize(100)
+    .build(
+      new CacheLoader[MLFlowRunCacheKey, MLFlowRunCacheEntity] {
+        override def load(k: MLFlowRunCacheKey): MLFlowRunCacheEntity = {
+          new MLFlowRunCacheEntity(k.runid)
+        }
+      }
+    )
+
+  private lazy val _cache = CacheBuilder.newBuilder()
+    .maximumSize(1000)
+    .build(
+      new CacheLoader[Key, CacheEntity[String]] {
+        override def load(key: Key): CacheEntity[String] = {
+          key match {
+            case cacheKey: CacheKey =>
+              new PythonEnvironmentCacheEntity(cacheKey.name, cacheKey.conf)
+            case runKey: MLFlowRunCacheKey =>
+              new MLFlowRunCacheEntity(runKey.runid)
+          }
+        }
+      }
+    )
+
+//  def get(yaml: String): String = {
     // TODO:(fchen) vilidate the yaml is in legal format.
-    val ymap = Conda.normalize(yaml)
-    _cache.get(
-      CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
-    ).get()
+//    val ymap = Conda.normalize(yaml)
+//    _pythonEnvCache.get(
+//      CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
+//    ).get()
+//  }
+
+  def get: (Key) => String = {
+    key => _cache.get(key).get()
+//    case k: CacheKey =>
+//      _pythonEnvCache.get(k).get()
+//    case k: MLFlowRunCacheKey =>
+//      _mlflowRunCache.get(k).get()
   }
 
   /**
@@ -41,6 +70,8 @@ object CacheManager {
     Paths.get(basePath, Array(name, s"${name}.tgz"): _*)
   }
 
+  // TODO:(fchen) generate base path with server info(hostname: port).
+  // so that we can deploy multi server on the same host.
   val basePath = "/tmp/cache"
 
   def main(args: Array[String]): Unit = {
@@ -58,21 +89,36 @@ object CacheManager {
         |name: conda-test
       """.stripMargin
 
-    (1 to 1000).foreach(i => {
+    (1 to 10).foreach(i => {
       new Thread(new Runnable {
         override def run(): Unit = {
-          get(yaml)
+          val ymap = Conda.normalize(yaml)
+          val k = CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
+          get(k)
         }
       }).start()
     })
   }
 }
 
-case class CacheKey(name: String, conf: JMap[String, Object]) {
+trait Key {
+  protected def keyHashCode: Int
+  protected def keyEquals(obj: Any): Boolean
+
   override def hashCode(): Int = {
-    name.hashCode
+    keyHashCode
   }
+
   override def equals(obj: Any): Boolean = {
+    keyEquals(obj)
+  }
+}
+
+case class CacheKey(name: String, conf: JMap[String, Object]) extends Key {
+
+  override protected def keyHashCode: Int = name.hashCode
+
+  override protected def keyEquals(obj: Any): Boolean = {
     obj match {
       case that: CacheKey =>
         that.name == name
@@ -82,62 +128,17 @@ case class CacheKey(name: String, conf: JMap[String, Object]) {
   }
 }
 
-class CacheEntity(name: String,
-                  configuration: JMap[String, Object]) {
+case class MLFlowRunCacheKey(runid: String) extends Key {
 
-  private val _lock = new ReentrantReadWriteLock()
-  private val _cacheVaild: AtomicBoolean = new AtomicBoolean(false)
+  override protected def keyHashCode: Int = runid.hashCode
 
-  def get(): String = {
-
-    _lock.readLock().lock()
-    if (!_cacheVaild.get()) {
-      _lock.readLock().unlock()
-      _lock.writeLock().lock()
-      try {
-        if (!_cacheVaild.get()) {
-          // do package download
-          // TODO:(fchen) throws execption when we has downloaded fail.
-          downloadAndPackage()
-          _cacheVaild.set(true)
-        }
-        _lock.readLock().lock()
-      } finally {
-        _lock.writeLock().unlock()
-      }
-    }
-    try {
-      // read data
-      name
-    } finally {
-      _lock.readLock().unlock()
+  override protected def keyEquals(obj: Any): Boolean = {
+    obj match {
+      case that: MLFlowRunCacheKey =>
+        that.runid == runid
+      case _ =>
+        false
     }
   }
-
-  private def downloadAndPackage(): Unit = {
-    import CacheManager._
-    if (!(Paths.get(basePath, Array(name): _*).toFile.exists() &&
-        Paths.get(basePath, Array(name, s"${name}.tgz"): _*).toFile.exists())) {
-      // the environment has never been download before, so we download this package now.
-      val envpath = Conda.createEnv(name, configuration, basePath + File.separator + name)
-
-      // make python command executable.
-      val makeExecutable = {
-        (path: Path, entry: TarArchiveEntry) => {
-          if (path.getFileName.toString.equalsIgnoreCase("python")) {
-            entry.setMode(755)
-          }
-        }
-      }
-      CompressUtil.tar(envpath.toString, s"${envpath}.tgz", makeExecutable)
-    }
-  }
-
-  /**
-   * .
-   * └── name
-   *     ├── name.tgz
-   *     ├── env
-   *     └── meta
-   */
 }
+

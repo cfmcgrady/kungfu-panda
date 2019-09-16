@@ -4,6 +4,7 @@ import java.util.Locale
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.catalyst.parser.CreateFunctionParser.ExtensionsBuilder
 import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
 import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, AstBuilder, ParseException, ParserInterface}
 import org.apache.spark.sql.catalyst.parser.ParserUtils._
@@ -37,6 +38,12 @@ object CreateFunctionParser {
   type ExtensionsBuilder = SparkSessionExtensions => Unit
   val parserBuilder: ParserBuilder = (_, _) => new CreateFunctionParser()
   val extBuilder: ExtensionsBuilder = { e => e.injectParser(parserBuilder)}
+}
+
+class PandaSparkExtensions extends ExtensionsBuilder {
+  override def apply(sessionExtensions: SparkSessionExtensions): Unit = {
+    sessionExtensions.injectParser((_, _) => new CreateFunctionParser())
+  }
 }
 
 class PandaAstBuider(conf: SQLConf) extends AstBuilder(conf) {

@@ -5,7 +5,8 @@ import java.util.Base64
 import scala.util.control.NonFatal
 
 import org.apache.catalina.servlet4preview.http.HttpServletRequest
-import org.panda.bamboo.util.CacheManager
+import org.apache.spark.panda.utils.Conda
+import org.panda.bamboo.util.{CacheKey, CacheManager}
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
 import org.springframework.web.bind.annotation.{PathVariable, RequestBody, RequestMapping, RequestMethod, RequestParam, RestController}
@@ -30,7 +31,7 @@ class CondaController {
     // scalastyle:off println
     println(yaml)
     // scalastyle:on
-    val name = CacheManager.get(yaml)
+    val name = CacheManager.get(key(yaml))
     val resource = new UrlResource(CacheManager.getFileByName(name).toUri)
 
     var contentType = ""
@@ -84,7 +85,7 @@ class CondaController {
   @RequestMapping(value = Array("/create"), method = Array(RequestMethod.POST))
   def create(@RequestBody yaml: String): Response = {
     try {
-      val name = CacheManager.get(yaml)
+      val name = CacheManager.get(key(yaml))
       Response(data = Map("name" -> name))
     } catch {
       case NonFatal(e) =>
@@ -130,6 +131,11 @@ class CondaController {
   @RequestMapping(value = Array("/encode"), method = Array(RequestMethod.POST))
   def encode(@RequestBody yaml: String): Response = {
     Response(data = Map("result" -> Base64.getEncoder.encodeToString(yaml.getBytes("utf-8"))))
+  }
+
+  private def key(yaml: String): CacheKey = {
+    val ymap = Conda.normalize(yaml)
+    CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
   }
 }
 
