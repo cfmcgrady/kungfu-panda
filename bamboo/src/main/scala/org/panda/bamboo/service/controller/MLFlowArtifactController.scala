@@ -1,8 +1,9 @@
 package org.panda.bamboo.service.controller
 
 import java.net.URI
-import javax.servlet.http.HttpServletRequest
+import java.nio.file.Paths
 
+import javax.servlet.http.HttpServletRequest
 import org.panda.bamboo.util.{CacheManager, MLFlowRunCacheKey}
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
@@ -25,7 +26,7 @@ class MLFlowArtifactController {
 
     val path = CacheManager.get(key(runid))
 
-    val resource = new UrlResource(s"${path}.tgz")
+    val resource = new UrlResource(Paths.get(path).toUri)
 
     var contentType = ""
 
@@ -45,6 +46,17 @@ class MLFlowArtifactController {
       .contentType(MediaType.parseMediaType(contentType))
       .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
       .body(resource)
+  }
+
+  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.GET, RequestMethod.POST))
+  def remove(@PathVariable runid: String): Response = {
+    try {
+      CacheManager.remove(key(runid))
+      Response()
+    } catch {
+      case e: Exception =>
+        Response(stat = false, message = e.getMessage)
+    }
   }
 
   private def key(runid: String): MLFlowRunCacheKey = {

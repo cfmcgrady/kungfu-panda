@@ -40,10 +40,13 @@ object CompressUtil {
   def tar(sourceDirectory: String,
           targetTarFile: String,
           action: (Path, TarArchiveEntry) => Unit = (_, _) => Unit): Unit = {
-//    throw new RuntimeException("something wrong with this function.")
-    val p = Files.createFile(Paths.get(targetTarFile))
+    val targetTarFilePath = Paths.get(targetTarFile)
+    // make sure parent path exist.
+    if (!Files.exists(targetTarFilePath.getParent)) {
+      Files.createDirectories(targetTarFilePath.getParent)
+    }
+    val p = Files.createFile(targetTarFilePath)
     val gzipOS = new GzipCompressorOutputStream(Files.newOutputStream(p))
-//    val taos = new TarArchiveOutputStream(Files.newOutputStream(p))
     val taos = new TarArchiveOutputStream(gzipOS)
     taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
     try {

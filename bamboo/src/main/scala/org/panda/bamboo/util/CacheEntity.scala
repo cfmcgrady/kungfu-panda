@@ -1,8 +1,8 @@
 package org.panda.bamboo.util
 
-import java.io.File
-import java.net.URI
-import java.nio.file.{Path, Paths}
+import java.io.{File, IOException}
+import java.net.{URI, URISyntaxException}
+import java.nio.file.{Files, Path, Paths}
 import java.util.{Map => JMap}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -107,27 +107,71 @@ class PythonEnvironmentCacheEntity (
 }
 
 class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
+  private val logger = LogFactory.getLog(getClass)
 
-  private lazy val ARTIFACT_ROOT = new URI(sys.env.getOrElse("MLFLOW_ARTIFACT_ROOT", throw new RuntimeException("")))
+//  private lazy val ARTIFACT_ROOT = new URI(sys.env.getOrElse("MLFLOW_ARTIFACT_ROOT", throw new RuntimeException("")))
+  private lazy val ARTIFACT_ROOT = resolveURI("/Users/fchen/Project/python/mlflow-study/mlruns")
+
+  private lazy val BASE_PATH = "/tmp/runs"
 
   override protected def write: Unit = {
 
+    // make sure this run was not downloaded before.
+    if (new File(compressFilePath).getParentFile.exists()) {
+      return
+    }
+    logger.info(s"start to download run ${runid} from artifact ${ARTIFACT_ROOT}")
+
     val path = ARTIFACT_ROOT.getScheme.toLowerCase match {
       case "file" =>
-        Util.getArtifactByRunId(ARTIFACT_ROOT.toString, runid)
+        Util.getArtifactByRunId(ARTIFACT_ROOT.getPath, runid)
       case "sftp" =>
         // TODO:(fchen) we should look the remote path from mlflow tracking server api.
         val remotePath = ARTIFACT_ROOT.getPath + "/0/" + runid
         SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, "/tmp/runs")
-        s"/tmp/runs/$runid"
+        s"${BASE_PATH}/$runid"
       case _ =>
         throw new UnsupportedOperationException()
     }
-    CompressUtil.tar(path, s"${path}.tgz")
+    CompressUtil.tar(path, compressFilePath)
   }
 
-  override protected def read: String = runid
+  def compressFilePath: String = {
+    s"${BASE_PATH}/${runid}/${runid}.tgz"
+  }
 
-  override def delete: Unit = throw new UnsupportedOperationException()
+  override protected def read: String = compressFilePath
+
+  override def delete: Unit = {
+    try {
+      Util.recursiveListFiles(Paths.get(s"${BASE_PATH}/${runid}").toFile)
+          .foreach(f => {
+            Files.deleteIfExists(f.toPath)
+          })
+      Files.deleteIfExists(Paths.get(s"${BASE_PATH}/${runid}"))
+    } catch {
+      case e: IOException =>
+        logger.info(s"remove run $runid failed!", e)
+    }
+  }
+
+  private def resolveURI(path: String): URI = {
+    try {
+      val uri = new URI(path)
+      if (uri.getScheme() != null) {
+        return uri
+      }
+      // make sure to handle if the path has a fragment (applies to yarn
+      // distributed cache)
+      if (uri.getFragment() != null) {
+        val absoluteURI = new File(uri.getPath()).getAbsoluteFile().toURI()
+        return new URI(absoluteURI.getScheme(), absoluteURI.getHost(), absoluteURI.getPath(),
+          uri.getFragment())
+      }
+    } catch {
+      case e: URISyntaxException =>
+    }
+    new File(path).getAbsoluteFile().toURI()
+  }
 
 }
