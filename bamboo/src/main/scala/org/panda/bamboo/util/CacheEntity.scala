@@ -109,8 +109,7 @@ class PythonEnvironmentCacheEntity (
 class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
   private val logger = LogFactory.getLog(getClass)
 
-//  private lazy val ARTIFACT_ROOT = new URI(sys.env.getOrElse("MLFLOW_ARTIFACT_ROOT", throw new RuntimeException("")))
-  private lazy val ARTIFACT_ROOT = resolveURI("/Users/fchen/Project/python/mlflow-study/mlruns")
+  private lazy val ARTIFACT_ROOT = new URI(sys.env.getOrElse("MLFLOW_ARTIFACT_ROOT", throw new RuntimeException("")))
 
   private lazy val BASE_PATH = "/tmp/runs"
 
@@ -128,8 +127,13 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
       case "sftp" =>
         // TODO:(fchen) we should look the remote path from mlflow tracking server api.
         val remotePath = ARTIFACT_ROOT.getPath + "/0/" + runid
-        SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, "/tmp/runs")
-        s"${BASE_PATH}/$runid"
+        val localPath = s"${BASE_PATH}/$runid"
+
+        // make sure the `BASE_PATH` exist. otherwise we should create the directory manually.
+        Util.mkdir(localPath)
+
+        SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, localPath + s"/${runid}")
+        localPath
       case _ =>
         throw new UnsupportedOperationException()
     }

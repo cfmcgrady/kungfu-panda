@@ -36,7 +36,13 @@ object SFTPUtil {
     val config = configs.getConfig(host)
     val key = ssh.loadKeys(config.getValue("IdentityFile").replaceFirst("~", userHomePath))
     val hostname = config.getHostname
-    val port = config.getPort
+    val port = {
+      if (config.getPort != -1) {
+        config.getPort
+      } else {
+        22
+      }
+    }
     try {
         ssh.connect(hostname, port)
         ssh.authPublickey(config.getUser, key)
