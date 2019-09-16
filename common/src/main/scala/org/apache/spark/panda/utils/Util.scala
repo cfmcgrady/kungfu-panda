@@ -1,7 +1,7 @@
 package org.apache.spark.panda.utils
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.security.MessageDigest
 
 /**
@@ -56,6 +56,13 @@ object Util {
       .digest(string.getBytes("UTF-8"))
       .map("%02x".format(_))
       .mkString
+  }
+
+  def mkdir(path: String): Unit = {
+    val p = Paths.get(path)
+    if (!Files.exists(p)) {
+      Files.createDirectories(p)
+    }
   }
 
 
