@@ -15,19 +15,6 @@ import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
 object PandaSqlExample {
   def main(args: Array[String]): Unit = {
 //
-    val path = "/tmp/testdata/12891819633_e4c82b51e8.jpg"
-    val file = new File(path)
-    val in = new FileInputStream(file)
-    val array = ByteStreams.toByteArray(in)
-    println(array.slice(0, 100).mkString(","))
-//    println(new String(Base64.getEncoder.encode(array), "utf-8"))
-//    println(new String(      org.apache.commons.codec.binary.Base64.encodeBase64(
-//      array
-//    )))
-////    println(array.slice(0, 100).mkString(","))
-//    System.exit(0)
-
-
     val spark = SparkSession
       .builder()
       .appName("panda sql example")
@@ -78,13 +65,13 @@ object PandaSqlExample {
 
     df.selectExpr("test(feature) as predict", "filename").show()
 //
-//    spark.sql(
-//      """
-//        |select test(x, y) from (
-//        |select 1 as x, 1 as y
-//        |)
-//        |""".stripMargin)
-//      .show()
+    spark.sql(
+      """
+        |select test(x, y) from (
+        |select 1 as x, 1 as y
+        |)
+        |""".stripMargin)
+      .show()
 
   }
 }
