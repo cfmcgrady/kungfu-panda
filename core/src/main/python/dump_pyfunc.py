@@ -30,8 +30,9 @@ def predict(*args):
             message="Invalid result_type '{}'. Result type can only be one of or an array of one "
                     "of the following types types: {}".format(str(elem_type), str(supported_types)),
             error_code=INVALID_PARAMETER_VALUE)
-    model = SparkModelCache.get_or_load(archive_path)
-    # model = load_pyfunc(archive_path)
+    # model = SparkModelCache.get_or_load(archive_path)
+    # todo:(fchen) cache model
+    model = load_pyfunc(archive_path)
     schema = {str(i): arg for i, arg in enumerate(args)}
     # Explicitly pass order of columns to avoid lexicographic ordering (i.e., 10 < 2)
     columns = [str(i) for i, _ in enumerate(args)]

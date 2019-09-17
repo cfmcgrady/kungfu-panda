@@ -46,10 +46,10 @@ object PandasFunctionManager {
                               pythonExec: Option[String] = None,
                               pythonVer: Option[String] = None
                              ): Unit = {
-    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
+//    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
     val funcSerPath = Utils.createTempDir().getPath + File.separator + "dump_func"
     writeBinaryPythonFunc(
-      funcSerPath, modelPath, returnType.getOrElse(IntegerType),
+      funcSerPath, modelLocalPath, returnType.getOrElse(IntegerType),
       driverPythonExec.getOrElse("python")
     )
     registerPythonUDF(spark, funcSerPath, functionName, returnType, pythonExec, pythonVer)

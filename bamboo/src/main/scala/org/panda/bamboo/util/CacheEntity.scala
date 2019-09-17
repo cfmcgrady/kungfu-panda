@@ -130,9 +130,9 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
         val localPath = s"${BASE_PATH}/$runid"
 
         // make sure the `BASE_PATH` exist. otherwise we should create the directory manually.
-        Util.mkdir(localPath)
+        Util.mkdir(BASE_PATH)
 
-        SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, localPath + s"/${runid}")
+        SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, localPath)
         localPath
       case _ =>
         throw new UnsupportedOperationException()

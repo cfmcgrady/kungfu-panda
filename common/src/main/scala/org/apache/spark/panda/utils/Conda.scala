@@ -49,12 +49,19 @@ object Conda {
     val info = yaml.load[JMap[String, Object]](configurations)
     val dependencies = info.get("dependencies")
 
+    // add pyarrow dependency for pyspark runtime.
+    addPyarrow(dependencies.asInstanceOf[JArrayList[Object]])
+
     val (dep, pip) = extract(dependencies.asInstanceOf[JArrayList[Object]].asScala)
 
     val total = dep ++ pip
 
     val nname = Util.stringToMD5(total.sortBy(x => x).mkString(","))
     info.put("name", nname)
+
+    // remove user define channels.
+    info.remove("channels")
+
     info
 
   }
@@ -98,9 +105,23 @@ object Conda {
     conf
   }
 
-  def addPyarrow(configurations: JMap[String, Object]): Unit = {
-//    pyarrow==0.12.1
+  def addPyarrow(pip: Buffer[String]): Buffer[String] = {
+    pip.filter(!_.startsWith("pyarrow")) += PYARROW
   }
+
+  def addPyarrow(dependencies: JArrayList[Object]): Unit = {
+    dependencies.asScala
+      .collect { case map: java.util.LinkedHashMap[_, _] => map}
+      .headOption
+      .foreach(pip => {
+        pip.get("pip")
+          .asInstanceOf[JArrayList[Object]]
+          .add(PYARROW)
+      })
+  }
+
+  // todo: (fchen) read from system configurations.
+  val PYARROW = "pyarrow==0.12.1"
 
 }
 
