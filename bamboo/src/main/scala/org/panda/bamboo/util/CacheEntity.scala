@@ -127,17 +127,17 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
       case "sftp" =>
         // TODO:(fchen) we should look the remote path from mlflow tracking server api.
         val remotePath = ARTIFACT_ROOT.getPath + "/0/" + runid
-        val localPath = s"${BASE_PATH}/$runid"
+        val localPath = s"${BASE_PATH}/$runid/${runid}"
 
         // make sure the `BASE_PATH` exist. otherwise we should create the directory manually.
-        Util.mkdir(BASE_PATH)
+        Util.mkdir(localPath)
 
         SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, localPath)
         localPath
       case _ =>
         throw new UnsupportedOperationException()
     }
-    CompressUtil.tar(path, compressFilePath)
+    CompressUtil.tar2(path, compressFilePath)
   }
 
   def compressFilePath: String = {

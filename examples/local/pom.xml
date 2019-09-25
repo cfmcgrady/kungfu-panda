@@ -34,6 +34,11 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_${scala.binary.version}</artifactId>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>cloud.fchen</groupId>-->
+<!--            <artifactId>spark-binary-source</artifactId>-->
+<!--            <version>1.0</version>-->
+<!--        </dependency>-->
     </dependencies>
 
 </project>
