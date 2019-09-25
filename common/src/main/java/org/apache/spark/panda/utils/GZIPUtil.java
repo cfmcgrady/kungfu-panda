@@ -37,6 +37,7 @@ public class GZIPUtil {
       e.printStackTrace();
     }finally{
       try {
+        tarArchive.finish();
         tarArchive.close();
       } catch (IOException e) {
         // TODO Auto-generated catch block
@@ -54,13 +55,16 @@ public class GZIPUtil {
     // add tar ArchiveEntry
 
 //    tarEntry.setMode(755)
-    tarArchive.putArchiveEntry(new TarArchiveEntry(file, entryName));
+    TarArchiveEntry tae = new TarArchiveEntry(file, entryName);
+    tae.setSize(file.length());
+    tarArchive.putArchiveEntry(tae);
     if(file.isFile()) {
-//      FileInputStream fis = new FileInputStream(file);
-//      BufferedInputStream bis = new BufferedInputStream(fis);
+      FileInputStream fis = new FileInputStream(file);
+      BufferedInputStream bis = new BufferedInputStream(fis);
 //      // Write file content to archive
 //      IOUtils.copy(bis, tarArchive);
-      Files.copy(file.toPath(), tarArchive);
+      org.apache.commons.io.IOUtils.copyLarge(bis, tarArchive);
+//      Files.copy(file.toPath(), tarArchive);
       tarArchive.closeArchiveEntry();
 //      bis.close();
     }else if(file.isDirectory()) {

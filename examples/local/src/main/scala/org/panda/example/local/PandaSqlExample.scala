@@ -6,6 +6,8 @@ import java.util.Base64
 import com.google.common.io.ByteStreams
 import org.apache.spark.catalyst.parser.CreateFunctionParser
 import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
+import org.apache.spark.sql.panda.PandasFunctionManager
+import org.apache.spark.sql.types.StringType
 
 /**
  * @time 2019-09-05 14:59
@@ -15,19 +17,6 @@ import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
 object PandaSqlExample {
   def main(args: Array[String]): Unit = {
 //
-    val path = "/tmp/testdata/12891819633_e4c82b51e8.jpg"
-    val file = new File(path)
-    val in = new FileInputStream(file)
-    val array = ByteStreams.toByteArray(in)
-    println(array.slice(0, 100).mkString(","))
-//    println(new String(Base64.getEncoder.encode(array), "utf-8"))
-//    println(new String(      org.apache.commons.codec.binary.Base64.encodeBase64(
-//      array
-//    )))
-////    println(array.slice(0, 100).mkString(","))
-//    System.exit(0)
-
-
     val spark = SparkSession
       .builder()
       .appName("panda sql example")
@@ -42,10 +31,14 @@ object PandaSqlExample {
     val binaryFile = spark.sparkContext.binaryFiles("/tmp/testdata/*")
         .map(r => (r._1, r._2.toArray()))
         .toDF("filename", "image")
+    binaryFile.show()
 
-//    val df = spark.read.format("binaryFile")
-      val df = binaryFile
-          .selectExpr("cast(base64(image) as string) as feature", "filename")
+    val df = spark.read.format("binaryFile")
+      .load("/tmp/testdata")
+    df.show()
+    System.exit(0)
+//      val df = binaryFile
+//          .selectExpr("cast(base64(content) as string) as feature", "path")
 //    val df = spark.read
 //      .format("image")
 //      .load("/tmp/flower_photos/*")
@@ -66,25 +59,34 @@ object PandaSqlExample {
 //    val artifactRoot = "/Users/fchen/Project/python/mlflow-study/mlruns"
 //    val runid = "9c6c59d0f57f40dfbbded01816896687"
 //
-    spark.sql(
-      s"""
-        |CREATE FUNCTION `test` AS '${runid}' USING
-        |  `type` 'mlflow',
-        |  `returns` 'array<string>',
-        |  `artifactRoot` '${artifactRoot}',
-        |  `pythonExec` '${python}',
-        |  `pythonVer` '3.7'
-      """.stripMargin)
-
-    df.selectExpr("test(feature) as predict", "filename").show()
-//
 //    spark.sql(
-//      """
-//        |select test(x, y) from (
-//        |select 1 as x, 1 as y
-//        |)
-//        |""".stripMargin)
-//      .show()
+//      s"""
+//        |CREATE FUNCTION `test` AS '${runid}' USING
+//        |  `type` 'mlflow',
+//        |  `returns` 'array<string>',
+//        |  `artifactRoot` '${artifactRoot}',
+//        |  `pythonExec` '${python}',
+//        |  `pythonVer` '3.7'
+//      """.stripMargin)
+    PandasFunctionManager.registerMLFlowPythonUDF(
+      spark, "test",
+      returnType = Option(org.apache.spark.sql.types.ArrayType(StringType)),
+      artifactRoot = Option(artifactRoot),
+      runId = runid,
+      driverPythonExec = Option(python),
+      driverPythonVer = None,
+      pythonExec = Option(python),
+      pythonVer = None)
+
+    df.selectExpr("test(feature) as predict", "path").show()
+//
+    spark.sql(
+      """
+        |select test(x, y) from (
+        |select 1 as x, 1 as y
+        |)
+        |""".stripMargin)
+      .show()
 
   }
 }

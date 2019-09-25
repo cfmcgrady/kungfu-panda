@@ -15,7 +15,6 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object CompressUtil {
-
   def zip(sourceDirectory: String, targetZipFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetZipFile))
     val zs = new ZipOutputStream(Files.newOutputStream(p))
