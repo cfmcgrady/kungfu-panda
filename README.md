@@ -1,6 +1,8 @@
 # Kungfu Panda
 **Kungfu Panda** is a library for register python pandas UDFs in Spark SQL.
 
+[![License](http://img.shields.io/:license-Apache_v2-blue.svg)](https://github.com/cfmcgrady/kungfu-panda/blob/master/LICENSE)
+
 # Quick Start
 
 1. download project.
