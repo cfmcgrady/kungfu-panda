@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.logging.LogFactory
-import org.apache.spark.panda.utils.{CompressUtil, Conda, SFTPUtil, Util}
+import org.apache.spark.panda.utils.{CompressUtil, Conda, MinioUtilImpl, MLFlowUtil, SFTPUtil, Util}
 
 /**
  * @time 2019-09-12 16:48
@@ -18,7 +18,7 @@ import org.apache.spark.panda.utils.{CompressUtil, Conda, SFTPUtil, Util}
 trait CacheEntity[T] {
 
   private val _lock = new ReentrantReadWriteLock()
-  private val _cacheVaild: AtomicBoolean = new AtomicBoolean(false)
+  private val _cacheValid: AtomicBoolean = new AtomicBoolean(false)
 
   protected def write: Unit
 
@@ -30,7 +30,7 @@ trait CacheEntity[T] {
     _lock.writeLock().lock()
     try {
       delete
-        _cacheVaild.set(false)
+        _cacheValid.set(false)
     } finally {
       _lock.writeLock().unlock()
     }
@@ -39,15 +39,15 @@ trait CacheEntity[T] {
   def get(): T = {
 
     _lock.readLock().lock()
-    if (!_cacheVaild.get()) {
+    if (!_cacheValid.get()) {
       _lock.readLock().unlock()
       _lock.writeLock().lock()
       try {
-        if (!_cacheVaild.get()) {
+        if (!_cacheValid.get()) {
           // do package download
           // TODO:(fchen) throws execption when we has downloaded fail.
           write
-          _cacheVaild.set(true)
+          _cacheValid.set(true)
         }
         _lock.readLock().lock()
       } finally {
@@ -106,53 +106,71 @@ class PythonEnvironmentCacheEntity (
    */
 }
 
-class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
+class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String]
+    with MLFlowUtil
+    with ResolvedPath {
+
   private val logger = LogFactory.getLog(getClass)
 
-  private lazy val ARTIFACT_ROOT = new URI(sys.env.getOrElse("MLFLOW_ARTIFACT_ROOT", throw new RuntimeException("")))
+  private lazy val MLFLOW_TRACKING_URI = sys.env.getOrElse("MLFLOW_TRACKING_URI",
+    throw new IllegalArgumentException("please set MLFLOW_TRACKING_URI environment variable.")
+  )
 
-  private lazy val BASE_PATH = "/tmp/runs"
+  override def mlflowTrackingUri: String = MLFLOW_TRACKING_URI
+
+  logger.info(s"service start with MLFLOW_TRACKING_URI = ${mlflowTrackingUri}")
+
+  private val resolvedRunPath = resolveRunPath(runid)
+
+  private val resolvedCompressionPath = compressFilePath(runid)
 
   override protected def write: Unit = {
 
     // make sure this run was not downloaded before.
-    if (new File(compressFilePath).getParentFile.exists()) {
+    if (new File(compressFilePath(runid)).getParentFile.exists()) {
       return
     }
-    logger.info(s"start to download run ${runid} from artifact ${ARTIFACT_ROOT}")
 
-    val path = ARTIFACT_ROOT.getScheme.toLowerCase match {
+    artifactUri(runid) match {
+      case Right(uri) =>
+        logger.info(s"start to download run ${runid} from artifact ${uri}")
+        downloadAndCompress(new URI(uri))
+      case Left(e) =>
+        throw e
+    }
+  }
+
+  def downloadAndCompress(uri: URI): Unit = {
+    uri.getScheme.toLowerCase match {
       case "file" =>
-        Util.getArtifactByRunId(ARTIFACT_ROOT.getPath, runid)
+        val path = Util.getArtifactByRunId(uri.getPath, runid)
+        CompressUtil.tar2(path, resolvedCompressionPath)
       case "sftp" =>
         // TODO:(fchen) we should look the remote path from mlflow tracking server api.
-        val remotePath = ARTIFACT_ROOT.getPath + "/0/" + runid
-        val localPath = s"${BASE_PATH}/$runid/${runid}"
-
+        val remotePath = uri.getPath + "/0/" + runid
         // make sure the `BASE_PATH` exist. otherwise we should create the directory manually.
-        Util.mkdir(localPath)
+        Util.mkdir(resolvedRunPath)
 
-        SFTPUtil.download(ARTIFACT_ROOT.getHost, remotePath, localPath)
-        localPath
+        SFTPUtil.download(uri.getHost, remotePath, resolvedRunPath)
+        CompressUtil.tar2(resolvedRunPath, resolvedCompressionPath)
+      case "s3" =>
+        // make sure the `BASE_PATH` exist. otherwise we should create the directory manually.
+        Util.mkdir(resolvedRunPath)
+        MinioUtilImpl.downloadAsZip(uri.getHost, uri.getPath, resolvedCompressionPath)
       case _ =>
         throw new UnsupportedOperationException()
     }
-    CompressUtil.tar2(path, compressFilePath)
   }
 
-  def compressFilePath: String = {
-    s"${BASE_PATH}/${runid}/${runid}.tgz"
-  }
-
-  override protected def read: String = compressFilePath
+  override protected def read: String = compressFilePath(runid)
 
   override def delete: Unit = {
     try {
-      Util.recursiveListFiles(Paths.get(s"${BASE_PATH}/${runid}").toFile)
+      Util.recursiveListFiles(Paths.get(resolvedRunPath).toFile)
           .foreach(f => {
             Files.deleteIfExists(f.toPath)
           })
-      Files.deleteIfExists(Paths.get(s"${BASE_PATH}/${runid}"))
+      Files.deleteIfExists(Paths.get(resolvedRunPath))
     } catch {
       case e: IOException =>
         logger.info(s"remove run $runid failed!", e)
@@ -176,6 +194,23 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String] {
       case e: URISyntaxException =>
     }
     new File(path).getAbsoluteFile().toURI()
+  }
+}
+
+trait ResolvedPath {
+  self: MLFlowRunCacheEntity =>
+  private lazy val BASE_PATH = sys.env.getOrElse("panda.cache.dir", "/tmp/panda/runs")
+
+  /**
+   * the root cache path of this run.
+   */
+  protected val resolveRunPath = (runid: String) => s"${BASE_PATH}/${runid}"
+
+  /**
+   * the compressed file path of this run.
+   */
+  val compressFilePath = {
+    runid: String => s"${resolveRunPath(runid)}/${runid}.tgz"
   }
 
 }

@@ -31,6 +31,7 @@
         <build.lib.path>${project.basedir}/libs</build.lib.path>
         <spark.version>2.4.3</spark.version>
         <spark.scope>provided</spark.scope>
+        <jackson.version>2.9.10</jackson.version>
         <skipTests>false</skipTests>
     </properties>
 
@@ -74,6 +75,14 @@
                                     <goals>
                                         <goal>shade</goal>
                                     </goals>
+                                    <configuration>
+                                        <transformers>
+<!--                                            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>-->
+                                            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                                <resource>META-INF/spring.factories</resource>
+                                            </transformer>
+                                        </transformers>
+                                    </configuration>
                                 </execution>
                             </executions>
                         </plugin>
@@ -271,6 +280,26 @@
                 <artifactId>spark-mllib_${scala.binary.version}</artifactId>
                 <version>${spark.version}</version>
                 <scope>${spark.scope}</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mlflow</groupId>
+                <artifactId>mlflow-client</artifactId>
+                <version>1.4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>6.0.11</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-scala_${scala.binary.version}</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

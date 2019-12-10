@@ -1,0 +1,4 @@
+export MLFLOW_TRACKING_URI=http://192.168.218.59:9999
+# export MLFLOW_ARTIFACT_ROOT=
+export MLFLOW_S3_ENDPOINT_URL=http://192.168.218.59:9000
+python new_train.py
