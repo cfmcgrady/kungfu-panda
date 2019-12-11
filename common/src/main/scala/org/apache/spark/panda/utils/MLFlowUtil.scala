@@ -48,5 +48,6 @@ object MLFlowUtilTest extends MLFlowUtil {
 //
 //    run.getInfo
 //      .getArtifactUri
+//    println(artifactUri("a063487ee34e463baf7101d145b96bb7"))
   }
 }

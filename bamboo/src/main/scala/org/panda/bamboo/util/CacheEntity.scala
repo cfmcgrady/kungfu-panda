@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.logging.LogFactory
-import org.apache.spark.panda.utils.{CompressUtil, Conda, MinioUtilImpl, MLFlowUtil, SFTPUtil, Util}
+import org.apache.spark.panda.utils.{CompressUtil, Conda, MLFlowMinioUtilImpl, MLFlowUtil, SFTPUtil, Util}
 
 /**
  * @time 2019-09-12 16:48
@@ -156,7 +156,7 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String]
       case "s3" =>
         // make sure the `BASE_PATH` exist. otherwise we should create the directory manually.
         Util.mkdir(resolvedRunPath)
-        MinioUtilImpl.downloadAsZip(uri.getHost, uri.getPath, resolvedCompressionPath)
+        MLFlowMinioUtilImpl.downloadAsZip(uri.getHost, uri.getPath, resolvedCompressionPath)
       case _ =>
         throw new UnsupportedOperationException()
     }

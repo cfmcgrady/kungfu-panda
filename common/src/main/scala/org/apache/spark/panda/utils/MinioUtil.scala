@@ -24,7 +24,8 @@ trait MinioUtil {
 
   def downloadAsZip(bucket: String,
                     obj: String,
-                    localFilePath: String): Unit = {
+                    localFilePath: String,
+                    normalizePath: String => String): Unit = {
     logger.info(s"begin to download bucket = ${bucket}, object = ${obj}, localFilePath = ${localFilePath}.")
     GZIPUtilV2.streamCreateTarArchive(localFilePath) {
       tar => {
@@ -32,7 +33,7 @@ trait MinioUtil {
           (item: Item) =>
             val in = minioClient.getObject(bucket, item.objectName())
             try {
-              GZIPUtilV2.streamAddToArchive(in, item.objectSize(), item.objectName(), tar)
+              GZIPUtilV2.streamAddToArchive(in, item.objectSize(), normalizePath(item.objectName()), tar)
             } finally {
               in.close()
             }
@@ -79,12 +80,29 @@ case class S3ServerInfo(
     accessKeyId: String,
     secretAccessKey: String)
 
-object MinioUtilImpl extends MinioUtil {
+object MLFlowMinioUtilImpl extends MinioUtil {
   override def serverInfo: S3ServerInfo = S3ServerInfo(
     sys.env.getOrElse("MLFLOW_S3_ENDPOINT_URL", throw new RuntimeException()),
     sys.env.getOrElse("AWS_ACCESS_KEY_ID", throw new RuntimeException()),
     sys.env.getOrElse("AWS_SECRET_ACCESS_KEY", throw new RuntimeException())
   )
+
+  // normalize the sub object path in the root obj. drop the experiment id in the path head.
+  // e.g.
+  // /0/a063487ee34e463baf7101d145b96bb7/artifacts => /a063487ee34e463baf7101d145b96bb7/artifacts
+  val _normalizePath = {
+    (absolutePathInBucket: String) =>
+      absolutePathInBucket.split("/") match {
+        case Array(_, _, normalized @ _*) => normalized.mkString("/", "/", "")
+      }
+  }
+
+  override def downloadAsZip(bucket: String,
+                             obj: String,
+                             localFilePath: String,
+                             normalizePath: String => String = _normalizePath): Unit = {
+    super.downloadAsZip(bucket, obj, localFilePath, normalizePath)
+  }
 }
 
 object MinioUtilTest extends MinioUtil {

@@ -1,11 +1,12 @@
 package org.apache.spark.sql.execution.command
 
-import java.io.File
 import java.util.Base64
 
-import org.apache.spark.SparkFiles
+import org.apache.spark.{SparkConf, SparkFiles}
+import org.apache.spark.internal.config.ConfigBuilder
 import org.apache.spark.panda.utils.{Conda, MLmodelParser}
 import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.panda.PandasFunctionManager
 import org.apache.spark.sql.types.DataType
 
@@ -38,12 +39,11 @@ case class CreateMLFlowFunctionCommand(
     Seq.empty[Row]
   }
 
-  val url = "10.25.111.222:8100"
   def setup(sparkSession: SparkSession,
             runid: String): Unit = {
 
     // first we download mlflow run from bamboo server and parser MLmodel file.
-    val run = s"http://${url}/api/v1/artifact/createAndGet/${runid}/${runid}.tgz"
+    val run = s"http://${bambooServer}/api/v1/artifact/createAndGet/${runid}/${runid}.tgz"
     sparkSession.sparkContext.addFile(run)
     val mlmodelPath = SparkFiles.get(runid) + s"/artifacts/model/MLmodel"
     val content = scala.io.Source.fromFile(mlmodelPath)
@@ -58,7 +58,7 @@ case class CreateMLFlowFunctionCommand(
       .mkString("\n")
     val name = Conda.normalize(condaYaml).get("name").toString
     val encodeConf = Base64.getEncoder.encodeToString(condaYaml.getBytes("utf-8"))
-    val condaUrl = s"http://${url}/api/v1/conda/createAndGet/${encodeConf}/${name}.tgz"
+    val condaUrl = s"http://${bambooServer}/api/v1/conda/createAndGet/${encodeConf}/${name}.tgz"
     sparkSession.sparkContext.addFile(condaUrl)
 
     val driverPython = s"${SparkFiles.get(name)}/bin/python"
@@ -76,6 +76,17 @@ case class CreateMLFlowFunctionCommand(
       pythonExec = pythonExec,
       pythonVer = pythonVer)
     Seq.empty[Row]
-
   }
+
+  val PANDA_BAMBOO_SERVER = SQLConf.buildConf("spark.panda.bamboo.server")
+    .stringConf
+    .checkValue(address => address != "",
+      "can't find spark.panda.bamboo.server in spark conf, " +
+        "please make sure you have set right configurations"
+    ).createWithDefaultString("")
+
+  val bambooServer = SQLConf.get.getConf(PANDA_BAMBOO_SERVER)
+  //    throw new RuntimeException("can't find spark.panda.bamboo.server in spark conf, " +
+  //      "please make sure you have set right configurations"))
+
 }
