@@ -86,7 +86,5 @@ case class CreateMLFlowFunctionCommand(
     ).createWithDefaultString("")
 
   val bambooServer = SQLConf.get.getConf(PANDA_BAMBOO_SERVER)
-  //    throw new RuntimeException("can't find spark.panda.bamboo.server in spark conf, " +
-  //      "please make sure you have set right configurations"))
 
 }
