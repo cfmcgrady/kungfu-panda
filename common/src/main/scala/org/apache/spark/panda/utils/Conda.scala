@@ -8,6 +8,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.Buffer
 import scala.sys.process.{Process, ProcessLogger}
 
+import org.slf4j.{Logger, LoggerFactory}
 import org.yaml.snakeyaml.Yaml
 
 /**
@@ -15,6 +16,13 @@ import org.yaml.snakeyaml.Yaml
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object Conda {
+
+  val logger = LoggerFactory.getLogger(getClass.getCanonicalName)
+
+  private val CONDA_COMMAND = sys.env.getOrElse("CONDA_PATH", "conda")
+
+  logger.info(s"using conda path = ${CONDA_COMMAND}.")
+
   def createEnv(name: String,
                 yaml: JMap[String, Object],
                 basePath: String): Path = {
@@ -30,7 +38,7 @@ object Conda {
     }
 
     try {
-      val cmd = s"conda env create -f ${yamlPath.toString} -p ${envPath}"
+      val cmd = s"${CONDA_COMMAND} env create -f ${yamlPath.toString} -p ${envPath}"
       // scalastyle:off println
       val logger = ProcessLogger(println, println)
       // scalastyle:on
