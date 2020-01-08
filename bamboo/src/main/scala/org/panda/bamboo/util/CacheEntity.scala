@@ -45,7 +45,7 @@ trait CacheEntity[T] {
       try {
         if (!_cacheValid.get()) {
           // do package download
-          // TODO:(fchen) throws execption when we has downloaded fail.
+          // TODO:(fchen) throws exception when we has downloaded fail.
           write
           _cacheValid.set(true)
         }

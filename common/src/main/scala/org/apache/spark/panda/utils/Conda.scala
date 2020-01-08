@@ -8,7 +8,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.Buffer
 import scala.sys.process.{Process, ProcessLogger}
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.Yaml
 
 /**
@@ -39,32 +39,33 @@ object Conda {
 
     try {
       val cmd = s"${CONDA_COMMAND} env create -f ${yamlPath.toString} -p ${envPath}"
+      logger.info(s"running command [ ${cmd} ].")
       // scalastyle:off println
-      val logger = ProcessLogger(println, println)
+      val processLogger = ProcessLogger(logger.info, logger.info)
       // scalastyle:on
       Process(
         cmd
-      ).!!(logger)
+      ).!!(processLogger)
     } catch {
       case e: RuntimeException =>
         e.printStackTrace()
     }
+    logger.info(s"finished create environment $name.")
     envPath
   }
 
-  def normalize(configurations: String): JMap[String, Object] = {
+  def normalize(configurations: String, withPyarrow: Boolean = true): JMap[String, Object] = {
     val yaml = new Yaml()
     val info = yaml.load[JMap[String, Object]](configurations)
     val dependencies = info.get("dependencies")
 
-    // add pyarrow dependency for pyspark runtime.
-    addPyarrow(dependencies.asInstanceOf[JArrayList[Object]])
+    if (withPyarrow) {
+      // add pyarrow dependency for pyspark runtime.
+      addPyarrow(dependencies.asInstanceOf[JArrayList[Object]])
+    }
 
     val (dep, pip) = extract(dependencies.asInstanceOf[JArrayList[Object]].asScala)
-
-    val total = dep ++ pip
-
-    val nname = Util.stringToMD5(total.sortBy(x => x).mkString(","))
+    val nname = generateEnvironmentName(dep, pip)
     info.put("name", nname)
 
     // remove user define channels.
@@ -121,7 +122,12 @@ object Conda {
     dependencies.asScala
       .collect { case map: java.util.LinkedHashMap[_, _] => map}
       .headOption
-      .foreach(pip => {
+      .orElse {
+        val pip = new java.util.LinkedHashMap[Object, Object]()
+        pip.put("pip", new JArrayList[Object]())
+        dependencies.add(pip)
+        Option(pip)
+      }.foreach(pip => {
         pip.get("pip")
           .asInstanceOf[JArrayList[Object]]
           .add(PYARROW)
@@ -130,6 +136,15 @@ object Conda {
 
   // todo: (fchen) read from system configurations.
   val PYARROW = "pyarrow==0.12.1"
+
+  private def generateEnvironmentName(dependencies: Buffer[String], pip: Buffer[String]): String = {
+    // We should sort the package first so that we can generate the unique id for the same Conda environment,
+    // in which the environment dependencies have a shuffled order.
+    Util.stringToMD5(
+      dependencies.sortBy(o => o).mkString("dependencies: [", ",", "]") +
+        pip.sortBy(o => o).mkString("pip: [", ",", "]")
+    )
+  }
 
 }
 

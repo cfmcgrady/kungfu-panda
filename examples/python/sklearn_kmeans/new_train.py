@@ -29,6 +29,6 @@ print(kmeans.predict(d))
 
 import mlflow
 import mlflow.sklearn
-mlflow.set_experiment("hello_world")
+mlflow.set_experiment("odep example")
 with mlflow.start_run():
     mlflow.sklearn.log_model(kmeans, "model")

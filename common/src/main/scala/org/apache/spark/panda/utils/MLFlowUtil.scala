@@ -8,7 +8,7 @@ import org.mlflow.tracking.{MlflowClient, MlflowHttpException}
  */
 trait MLFlowUtil {
   def mlflowTrackingUri: String
-  private val client = new MlflowClient(mlflowTrackingUri)
+  protected val client = new MlflowClient(mlflowTrackingUri)
 
   def artifactUri(runId: String): Either[Throwable, String] = {
     try {
@@ -27,7 +27,8 @@ trait MLFlowUtil {
 object MLFlowUtilTest extends MLFlowUtil {
   //  http://localhost:5000/api/2.0/mlflow/experiments/list
 //  override def mlflowTrackingUri: String = "http://localhost:5000"
-  override def mlflowTrackingUri: String = "http://192.168.218.59:9999"
+//  override def mlflowTrackingUri: String = "http://192.168.205.91:9999"
+  override def mlflowTrackingUri: String = "http://mlflow.k8s.uc.host.dxy"
 
   def main(args: Array[String]): Unit = {
 //    import scala.collection.JavaConverters._
@@ -44,10 +45,12 @@ object MLFlowUtilTest extends MLFlowUtil {
 //    })
 //
 //    println("-------")
-//    val run = client.getRun("aa")
-//
-//    run.getInfo
-//      .getArtifactUri
-//    println(artifactUri("a063487ee34e463baf7101d145b96bb7"))
+    val run = client.getRun("778825406cf44b02940a617b611c8384")
+
+    run.getInfo
+      .getArtifactUri
+//    println(artifactUri("778825406cf44b02940a617b611c8384"))
+//    client.getExperiment("").getExperiment.get
+
   }
 }

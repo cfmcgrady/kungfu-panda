@@ -1,5 +1,6 @@
 package org.panda.bamboo.service.controller
 
+import java.nio.file.{Files, Paths}
 import java.util.Base64
 
 import scala.util.control.NonFatal
@@ -9,7 +10,9 @@ import org.apache.spark.panda.utils.Conda
 import org.panda.bamboo.util.{CacheKey, CacheManager}
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
-import org.springframework.web.bind.annotation.{PathVariable, RequestBody, RequestMapping, RequestMethod, RequestParam, RestController}
+import org.springframework.web.bind.annotation.{PathVariable, PostMapping, RequestBody, RequestMapping, RequestMethod, RequestParam, RestController}
+import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
 /**
  * @time 2019-08-30 10:23
@@ -131,6 +134,37 @@ class CondaController {
   @RequestMapping(value = Array("/encode"), method = Array(RequestMethod.POST))
   def encode(@RequestBody yaml: String): Response = {
     Response(data = Map("result" -> Base64.getEncoder.encodeToString(yaml.getBytes("utf-8"))))
+  }
+
+  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.GET, RequestMethod.POST))
+  def remove(@PathVariable runid: String): Response = {
+    try {
+      CacheManager.remove(key(runid))
+      Response()
+    } catch {
+      case e: Exception =>
+        Response(stat = false, message = e.getMessage)
+    }
+  }
+
+  @PostMapping(value = Array("admin/upload"))
+  def manullyUpload(@RequestParam("file") file: MultipartFile,
+                    redirectAttributes: RedirectAttributes): Unit = {
+    if (file.isEmpty()) {
+        redirectAttributes.addFlashAttribute("message", "Please select a file to upload")
+        return "redirect:uploadStatus"
+    }
+    try {
+        // Get the file and save it somewhere
+        val bytes = file.getBytes()
+        val path = Paths.get("/tmp/dd" + file.getOriginalFilename())
+        Files.write(path, bytes)
+        redirectAttributes.addFlashAttribute("message",
+                "You successfully uploaded '" + file.getOriginalFilename() + "'")
+    } catch {
+      case e => e.printStackTrace()
+    }
+    return "redirect:/uploadStatus";
   }
 
   private def key(yaml: String): CacheKey = {

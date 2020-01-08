@@ -13,7 +13,6 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.execution.python.UserDefinedPythonFunction
 import org.apache.spark.sql.types.{DataType, IntegerType}
 import org.apache.spark.util.Utils
-import org.mlflow.tracking.MlflowClient
 
 /**
  * @time 2019-08-22 11:39
@@ -39,14 +38,13 @@ object PandasFunctionManager {
   }
 
   def registerMLFlowPythonUDFLocal(spark: SparkSession,
-                              functionName: String,
-                              modelLocalPath: String,
-                              returnType: Option[DataType] = None,
-                              driverPythonExec: Option[String] = None,
-                              driverPythonVer: Option[String] = None,
-                              pythonExec: Option[String] = None,
-                              pythonVer: Option[String] = None
-                             ): Unit = {
+                                   functionName: String,
+                                   modelLocalPath: String,
+                                   returnType: Option[DataType] = None,
+                                   driverPythonExec: Option[String] = None,
+                                   driverPythonVer: Option[String] = None,
+                                   pythonExec: Option[String] = None,
+                                   pythonVer: Option[String] = None): Unit = {
 //    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
     val funcSerPath = Utils.createTempDir().getPath + File.separator + "dump_func"
     writeBinaryPythonFunc(
@@ -157,6 +155,4 @@ object PandasFunctionManager {
     }
   }
 
-//  private val client = new MlflowClient("http://192.168.218.59:9999/#/")
-//  private val client = new MlflowClient("http://localhost:5000/api/2.0/mlflow/experiments/list")
 }

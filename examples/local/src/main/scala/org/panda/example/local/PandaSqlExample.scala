@@ -22,64 +22,21 @@ object PandaSqlExample {
       .appName("panda sql example")
       .master("local[4]")
       .config("spark.sql.extensions", "org.apache.spark.catalyst.parser.PandaSparkExtensions")
-
+      .config("spark.panda.bamboo.server.enable", "false")
 //      .withExtensions(CreateFunctionParser.extBuilder)
       .getOrCreate()
+    val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
+//    val python = "/usr/local/share/anaconda3/envs/pyspark-2.4.3/bin/python"
+    val path = "/Users/fchen/Project/fchen/kungfu-panda/examples/python/sklearn_kmeans/mlruns/1/e60af958648a4f7981c1195f82d82c1d/artifacts/model"
+    spark.sql(
+      s"""
+        |CREATE FUNCTION `test` AS '909e8c3a8b504f11ac29150af83cee42' USING
+        |         `type` 'mlflow',
+        |         `modelLocalPath` '$path',
+        |         `pythonExec` '$python',
+        |         `returns` 'int'
+        |""".stripMargin)
 
-    import spark.implicits._
-    import org.apache.spark.sql.functions._
-    val binaryFile = spark.sparkContext.binaryFiles("/tmp/testdata/*")
-        .map(r => (r._1, r._2.toArray()))
-        .toDF("filename", "image")
-    binaryFile.show()
-
-    val df = spark.read.format("binaryFile")
-      .load("/tmp/testdata")
-    df.show()
-    System.exit(0)
-//      val df = binaryFile
-//          .selectExpr("cast(base64(content) as string) as feature", "path")
-//    val df = spark.read
-//      .format("image")
-//      .load("/tmp/flower_photos/*")
-////      .select($"value", input_file_name as "name")
-////      .printSchema()
-//      .select("image.*")
-//      .selectExpr("base64(data) as feature_array", "origin", "data")
-//      .selectExpr("cast(feature_array as string) as feature", "xx(feature_array) as f2", "feature_array", "data", "yy(data)")
-//    df.show()
-//    System.exit(0)
-//      .show()
-
-//    val python = "/usr/local/share/anaconda3/envs/tensorflow-example/bin/python"
-    val python = "/usr/local/share/anaconda3/envs/flower_classifier/bin/python"
-    val artifactRoot = "/tmp"
-    val runid = "c1f48fc796f3467cb104114f3fa501df"
-//    val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
-//    val artifactRoot = "/Users/fchen/Project/python/mlflow-study/mlruns"
-//    val runid = "9c6c59d0f57f40dfbbded01816896687"
-//
-//    spark.sql(
-//      s"""
-//        |CREATE FUNCTION `test` AS '${runid}' USING
-//        |  `type` 'mlflow',
-//        |  `returns` 'array<string>',
-//        |  `artifactRoot` '${artifactRoot}',
-//        |  `pythonExec` '${python}',
-//        |  `pythonVer` '3.7'
-//      """.stripMargin)
-    PandasFunctionManager.registerMLFlowPythonUDF(
-      spark, "test",
-      returnType = Option(org.apache.spark.sql.types.ArrayType(StringType)),
-      artifactRoot = Option(artifactRoot),
-      runId = runid,
-      driverPythonExec = Option(python),
-      driverPythonVer = None,
-      pythonExec = Option(python),
-      pythonVer = None)
-
-    df.selectExpr("test(feature) as predict", "path").show()
-//
     spark.sql(
       """
         |select test(x, y) from (
@@ -89,4 +46,35 @@ object PandaSqlExample {
       .show()
 
   }
+
+//  def test(): Unit = {
+//    val spark = SparkSession
+//      .builder()
+//      .appName("panda sql example")
+//      .master("local[4]")
+//      .config("spark.sql.extensions", "org.apache.spark.catalyst.parser.PandaSparkExtensions")
+//      .config("spark.panda.bamboo.server.enable", "false")
+//      //      .withExtensions(CreateFunctionParser.extBuilder)
+//      .getOrCreate()
+//    val path = "/Users/fchen/Project/fchen/examples/mlflow-in-action/add/mlruns/1/58d234e03699404c938e0ba87d627920/artifacts/model"
+//    val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
+//    //    val python = "/usr/local/share/anaconda3/envs/pyspark-2.4.3/bin/python"
+////    val path = "/Users/fchen/Project/fchen/kungfu-panda/examples/python/sklearn_kmeans/mlruns/1/e60af958648a4f7981c1195f82d82c1d/artifacts/model"
+//    spark.sql(
+//      s"""
+//         |CREATE FUNCTION `test` AS '909e8c3a8b504f11ac29150af83cee42' USING
+//         |         `type` 'mlflow',
+//         |         `modelLocalPath` '$path',
+//         |         `pythonExec` '$python',
+//         |         `returns` 'int'
+//         |""".stripMargin)
+//
+//    spark.sql(
+//      """
+//        |select test(x) from (
+//        |select 1 as x, 1 as y
+//        |)
+//        |""".stripMargin)
+//      .show()
+//  }
 }

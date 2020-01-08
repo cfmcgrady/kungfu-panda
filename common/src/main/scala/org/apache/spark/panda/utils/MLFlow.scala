@@ -37,6 +37,22 @@ object MLFlow {
         |utc_time_created: '2019-08-21 06:37:27.408296'
       """.stripMargin
 
+    val yaml2 =
+      """
+        |flavors:
+        |  python_function:
+        |    artifacts:
+        |      lgb_model:
+        |        path: artifacts/lgb_model_path.pth
+        |        uri: lgb_model_path.pth
+        |    cloudpickle_version: 1.2.1
+        |    env: conda.yaml
+        |    loader_module: mlflow.pyfunc.model
+        |    python_model: python_model.pkl
+        |    python_version: 3.6.0
+        |utc_time_created: '2019-11-20 00:53:01.959671'
+        |""".stripMargin
+
     env(yaml)
   }
 
@@ -68,7 +84,7 @@ class MLmodelParser(content: String) {
     new Yaml().load[JMap[String, Object]](content)
   }
 
-  val artifactPath = typed[String](mlmodel.get("artifact_path"))
+  val artifactPath = typed[String](mlmodel.getOrDefault("artifact_path", "model"))
 
   val flavors = typed[JMap[String, Object]](mlmodel.get("flavors"))
 
