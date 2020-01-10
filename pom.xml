@@ -56,6 +56,14 @@
             </properties>
         </profile>
         <profile>
+            <id>spark-3.0</id>
+            <properties>
+                <spark.version>3.0.0-preview2</spark.version>
+                <scala.binary.version>2.12</scala.binary.version>
+                <scala.version>2.12.10</scala.version>
+            </properties>
+        </profile>
+        <profile>
             <id>single-jar</id>
             <build>
                 <pluginManagement>
@@ -321,7 +329,6 @@
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.binary.version}</artifactId>
             <version>3.0.3</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>

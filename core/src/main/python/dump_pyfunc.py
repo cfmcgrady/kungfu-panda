@@ -47,9 +47,9 @@ def predict(*args):
     # model = SparkModelCache.get_or_load(archive_path)
     # model = load_pyfunc(archive_path)
     model = ModelCache.get_or_load(archive_path)
-    schema = {str(i): arg for i, arg in enumerate(args)}
+    schema = {series.name: series for i, series in enumerate(args)}
     # Explicitly pass order of columns to avoid lexicographic ordering (i.e., 10 < 2)
-    columns = [str(i) for i, _ in enumerate(args)]
+    columns = [series.name for i, series in enumerate(args)]
     pdf = pandas.DataFrame(schema, columns=columns)
     # model.predict(pdf)
     result = model.predict(pdf)
