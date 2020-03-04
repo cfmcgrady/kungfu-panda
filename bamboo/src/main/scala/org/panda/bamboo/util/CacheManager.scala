@@ -2,6 +2,7 @@ package org.panda.bamboo.util
 
 import java.nio.file.{Path, Paths}
 import java.util.{Map => JMap}
+import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.juli.logging.LogFactory
@@ -15,28 +16,10 @@ object CacheManager {
 
   private val logger = LogFactory.getLog(getClass)
 
-  private lazy val _pythonEnvCache = CacheBuilder.newBuilder()
-    .maximumSize(100)
-    .build(
-      new CacheLoader[CacheKey, PythonEnvironmentCacheEntity] {
-        override def load(k: CacheKey): PythonEnvironmentCacheEntity = {
-          new PythonEnvironmentCacheEntity(k.name, k.conf)
-        }
-      }
-    )
-
-  private lazy val _mlflowRunCache = CacheBuilder.newBuilder()
-    .maximumSize(100)
-    .build(
-      new CacheLoader[MLFlowRunCacheKey, MLFlowRunCacheEntity] {
-        override def load(k: MLFlowRunCacheKey): MLFlowRunCacheEntity = {
-          new MLFlowRunCacheEntity(k.runid)
-        }
-      }
-    )
-
+  private val _lock = new ReentrantLock()
+  // todo:(fchen) 基于文件锁来实现
   private lazy val _cache = CacheBuilder.newBuilder()
-    .maximumSize(1000)
+    .maximumSize(100000)
     .build(
       new CacheLoader[Key, CacheEntity[String]] {
         override def load(key: Key): CacheEntity[String] = {
@@ -51,7 +34,9 @@ object CacheManager {
     )
 
   def get: (Key) => String = {
-    key => _cache.get(key).get()
+    withLock {
+      key => _cache.get(key).get()
+    }
 //    case k: CacheKey =>
 //      _pythonEnvCache.get(k).get()
 //    case k: MLFlowRunCacheKey =>
@@ -59,9 +44,12 @@ object CacheManager {
   }
 
   def remove: (Key) => Unit = {
-    key =>
-      logger.info(s"start to remove ${key}")
-      _cache.get(key).remove
+    withLock {
+      key =>
+        logger.info(s"start to remove ${key}")
+        _cache.get(key).remove
+        _cache.invalidate(key)
+    }
   }
 
   /**
@@ -75,30 +63,13 @@ object CacheManager {
   // so that we can deploy multi server on the same host.
   val basePath = "/tmp/cache"
 
-  def main(args: Array[String]): Unit = {
-    val yaml =
-      """
-        |channels:
-        |  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/main/
-        |  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/free/
-        |  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/r/
-        |  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/pro/
-        |  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/msys2/
-        |dependencies:
-        |- python=3.6.0
-        |- numpy
-        |name: conda-test
-      """.stripMargin
-
-    (1 to 10).foreach(i => {
-      new Thread(new Runnable {
-        override def run(): Unit = {
-          val ymap = Conda.normalize(yaml)
-          val k = CacheKey(ymap.getOrDefault("name", "").asInstanceOf[String], ymap)
-          get(k)
-        }
-      }).start()
-    })
+  private def withLock[T](f: T): T = {
+    _lock.lock()
+    try {
+      f
+    } finally {
+      _lock.unlock()
+    }
   }
 }
 

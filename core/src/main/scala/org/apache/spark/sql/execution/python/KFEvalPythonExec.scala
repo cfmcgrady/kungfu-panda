@@ -1,7 +1,6 @@
 package org.apache.spark.sql.execution.python
 
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -11,21 +10,12 @@ import org.apache.spark.api.python.{ChainedPythonFunctions, PythonEvalType}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Filter, LeafNode, LogicalPlan, OneRowRelation, Project, Statistics, SubqueryAlias, UnaryNode}
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Filter, LeafNode, LocalRelation, LogicalPlan, OneRowRelation, Project, Statistics, SubqueryAlias, UnaryNode}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.{LeafExecNode, SparkPlan}
 import org.apache.spark.sql.execution.arrow.ArrowUtils
 import org.apache.spark.sql.types.{DataType, StructField, StructType}
 import org.apache.spark.util.Utils
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-
-import org.apache.spark.api.python.PythonEvalType
-import org.apache.spark.sql.{AnalysisException, SparkSession}
-import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
-import org.apache.spark.sql.catalyst.rules.Rule
 
 /**
  * @time 2020/1/9 1:18 下午
@@ -34,7 +24,7 @@ import org.apache.spark.sql.catalyst.rules.Rule
  * copy from spark.
  */
 abstract class KFEvalPythonExec(udfs: Seq[PythonUDF],
-                                inputSchema: StructType,
+                                inputSchema: Option[StructType],
                                 output: Seq[Attribute],
                                 child: SparkPlan) extends EvalPythonExec(udfs, output, child) {
   protected override def doExecute(): RDD[InternalRow] = {
@@ -69,12 +59,18 @@ abstract class KFEvalPythonExec(udfs: Seq[PythonUDF],
       }.toArray
       val projection = newMutableProjection(allInputs, child.output)
 
-      val schema = if (child.schema == null) {
+//      val schema = if (child.schema == null) {
+//        StructType(dataTypes.zipWithIndex.map { case (dt, i) =>
+//          StructField(s"_$i", dt)
+//        })
+//      } else {
+//        child.schema
+//      }
+
+      val schema = inputSchema.getOrElse {
         StructType(dataTypes.zipWithIndex.map { case (dt, i) =>
           StructField(s"_$i", dt)
         })
-      } else {
-        child.schema
       }
       // 为什么这里能拿到正确的output？
       schema.printTreeString()
@@ -114,7 +110,7 @@ abstract class KFEvalPythonExec(udfs: Seq[PythonUDF],
  * A physical plan that evaluates a [[PythonUDF]].
  */
 case class KFArrowEvalPythonExec(udfs: Seq[PythonUDF],
-                                 inputSchema: StructType,
+                                 inputSchema: Option[StructType],
                                  output: Seq[Attribute],
                                  child: SparkPlan)
   extends KFEvalPythonExec(udfs, inputSchema, output, child) {
@@ -168,36 +164,16 @@ case class KFArrowEvalPythonExec(udfs: Seq[PythonUDF],
   }
 }
 
-case class OneRowRelationWithSchema(val output: Seq[Attribute],
-                                    data: Seq[(ExprId, Any)]) extends LeafNode {
-  override def maxRows: Option[Long] = Some(1)
-  override def computeStats(): Statistics = Statistics(sizeInBytes = 1)
-  //  /** [[org.apache.spark.sql.catalyst.trees.TreeNode.makeCopy()]] does not support 0-arg ctor. */
-  //  override def makeCopy(newArgs: Array[AnyRef]): OneRowRelationWithSchema = OneRowRelationWithSchema(outp)
-}
-
-case class EmptyRDDScanExec(output: Seq[Attribute],
-                        name: String,
-                        override val outputPartitioning: Partitioning = UnknownPartitioning(0),
-                        override val outputOrdering: Seq[SortOrder] = Nil) extends LeafExecNode {
-  override protected def doExecute(): RDD[InternalRow] =
-    sparkContext.parallelize(Seq(InternalRow()), 1)
-//  val singleRowRdd = SparkSession.active
-//    .sparkContext
-//    .parallelize(Seq(InternalRow()), 1)
-}
-
-case class AddOneRowRelationSchema() extends Rule[LogicalPlan] {
+case class OneRowRelationToLocalRelation() extends Rule[LogicalPlan] {
   override def apply(plan: LogicalPlan): LogicalPlan = {
     plan transform {
-      case project@ Project(projectList, child) if child.isInstanceOf[OneRowRelation] =>
+      case proj@ Project(projectList, relation: OneRowRelation) if projectList.forall(_.resolved) =>
         val output = projectList.map(_.toAttribute)
         val data = projectList.map {
-          case as@ Alias(child: Literal, name) =>
-            (as.exprId, child.value)
+          case as: Alias =>
+            as.child.eval()
         }
-        Project(projectList, OneRowRelationWithSchema(output, data))
-//      case project@ Project(projectList, child) if child.isInstanceOf[OneRowRelation] =>
+        Project(projectList, LocalRelation(output, Seq(InternalRow(data))))
     }
   }
 }
@@ -209,156 +185,3 @@ case class KFArrowEvalPython(udfs: Seq[PythonUDF],
                              inputSchema: StructType,
                              output: Seq[Attribute], child: LogicalPlan)
   extends UnaryNode
-
-//object KFExtractPythonUDFs extends Rule[LogicalPlan] with PredicateHelper {
-//  private type EvalType = Int
-//  private type EvalTypeChecker = EvalType => Boolean
-//
-//  private def hasScalarPythonUDF(e: Expression): Boolean = {
-//    e.find(PythonUDF.isScalarPythonUDF).isDefined
-//  }
-//
-//  private def canEvaluateInPython(e: PythonUDF): Boolean = {
-//    e.children match {
-//      // single PythonUDF child could be chained and evaluated in Python
-//      case Seq(u: PythonUDF) => e.evalType == u.evalType && canEvaluateInPython(u)
-//      // Python UDF can't be evaluated directly in JVM
-//      case children => !children.exists(hasScalarPythonUDF)
-//    }
-//  }
-//
-//  private def collectEvaluableUDFsFromExpressions(expressions: Seq[Expression]): Seq[PythonUDF] = {
-//    // Eval type checker is set once when we find the first evaluable UDF and its value
-//    // shouldn't change later.
-//    // Used to check if subsequent UDFs are of the same type as the first UDF. (since we can only
-//    // extract UDFs of the same eval type)
-//    var evalTypeChecker: Option[EvalTypeChecker] = None
-//
-//    def collectEvaluableUDFs(expr: Expression): Seq[PythonUDF] = expr match {
-//      case udf: PythonUDF if PythonUDF.isScalarPythonUDF(udf) && canEvaluateInPython(udf)
-//        && evalTypeChecker.isEmpty =>
-//        evalTypeChecker = Some((otherEvalType: EvalType) => otherEvalType == udf.evalType)
-//        Seq(udf)
-//      case udf: PythonUDF if PythonUDF.isScalarPythonUDF(udf) && canEvaluateInPython(udf)
-//        && evalTypeChecker.get(udf.evalType) =>
-//        Seq(udf)
-//      case e => e.children.flatMap(collectEvaluableUDFs)
-//    }
-//
-//    expressions.flatMap(collectEvaluableUDFs)
-//  }
-//
-//  def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-//    case plan: LogicalPlan => {
-//      println(plan)
-//      val result = extract(plan)
-//      result match {
-//        case ArrowEvalPython(udfs, output, child) =>
-//          plan.children.flatMap(_.expressions.collect{case ne: NamedExpression => ne})
-//              .foreach(println)
-//          plan.children.foreach(_.expressions.foreach(println))
-////          KFArrowEvalPython(udfs, )
-//          result
-//        case _ => result
-//      }
-//    }
-//  }
-//
-//  /**
-//   * Extract all the PythonUDFs from the current operator and evaluate them before the operator.
-//   */
-//  private def extract(plan: LogicalPlan): LogicalPlan = {
-//    val udfs = collectEvaluableUDFsFromExpressions(plan.expressions)
-//      // ignore the PythonUDF that come from second/third aggregate, which is not used
-//      .filter(udf => udf.references.subsetOf(plan.inputSet))
-//    if (udfs.isEmpty) {
-//      // If there aren't any, we are done.
-//      plan
-//    } else {
-//      val inputsForPlan = plan.references ++ plan.outputSet
-//      val prunedChildren = plan.children.map { child =>
-//        val allNeededOutput = inputsForPlan.intersect(child.outputSet).toSeq
-//        if (allNeededOutput.length != child.output.length) {
-//          Project(allNeededOutput, child)
-//        } else {
-//          child
-//        }
-//      }
-//      val planWithNewChildren = plan.withNewChildren(prunedChildren)
-//
-//      val attributeMap = mutable.HashMap[PythonUDF, Expression]()
-//      val splitFilter = trySplitFilter(planWithNewChildren)
-//      // Rewrite the child that has the input required for the UDF
-//      val newChildren = splitFilter.children.map { child =>
-//        // Pick the UDF we are going to evaluate
-//        val validUdfs = udfs.filter { udf =>
-//          // Check to make sure that the UDF can be evaluated with only the input of this child.
-//          udf.references.subsetOf(child.outputSet)
-//        }
-//        if (validUdfs.nonEmpty) {
-//          require(
-//            validUdfs.forall(PythonUDF.isScalarPythonUDF),
-//            "Can only extract scalar vectorized udf or sql batch udf")
-//
-//          val resultAttrs = udfs.zipWithIndex.map { case (u, i) =>
-//            AttributeReference(s"pythonUDF$i", u.dataType)()
-//          }
-//
-//          val evaluation = validUdfs.partition(
-//            _.evalType == PythonEvalType.SQL_SCALAR_PANDAS_UDF
-//          ) match {
-//            case (vectorizedUdfs, plainUdfs) if plainUdfs.isEmpty =>
-//              ArrowEvalPython(vectorizedUdfs, child.output ++ resultAttrs, child)
-//            case (vectorizedUdfs, plainUdfs) if vectorizedUdfs.isEmpty =>
-//              BatchEvalPython(plainUdfs, child.output ++ resultAttrs, child)
-//            case _ =>
-//              throw new AnalysisException(
-//                "Expected either Scalar Pandas UDFs or Batched UDFs but got both")
-//          }
-//
-//          attributeMap ++= validUdfs.zip(resultAttrs)
-//          evaluation
-//        } else {
-//          child
-//        }
-//      }
-//      // Other cases are disallowed as they are ambiguous or would require a cartesian
-//      // product.
-//      udfs.filterNot(attributeMap.contains).foreach { udf =>
-//        sys.error(s"Invalid PythonUDF $udf, requires attributes from more than one child.")
-//      }
-//
-//      val rewritten = splitFilter.withNewChildren(newChildren).transformExpressions {
-//        case p: PythonUDF if attributeMap.contains(p) =>
-//          attributeMap(p)
-//      }
-//
-//      // extract remaining python UDFs recursively
-//      val newPlan = extract(rewritten)
-//      if (newPlan.output != plan.output) {
-//        // Trim away the new UDF value if it was only used for filtering or something.
-//        Project(plan.output, newPlan)
-//      } else {
-//        newPlan
-//      }
-//    }
-//  }
-//
-//  // Split the original FilterExec to two FilterExecs. Only push down the first few predicates
-//  // that are all deterministic.
-//  private def trySplitFilter(plan: LogicalPlan): LogicalPlan = {
-//    plan match {
-//      case filter: Filter =>
-//        val (candidates, nonDeterministic) =
-//          splitConjunctivePredicates(filter.condition).partition(_.deterministic)
-//        val (pushDown, rest) = candidates.partition(!hasScalarPythonUDF(_))
-//        if (pushDown.nonEmpty) {
-//          val newChild = Filter(pushDown.reduceLeft(And), filter.child)
-//          Filter((rest ++ nonDeterministic).reduceLeft(And), newChild)
-//        } else {
-//          filter
-//        }
-//      case o => o
-//    }
-//  }
-//}

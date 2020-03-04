@@ -103,6 +103,7 @@ object Conda {
     }
 
     yaml.dump(conf, new FileWriter(filePath.toFile))
+    logger.info(s"write [ ${conf.asScala.mkString(",")} ] into [ ${filePath} ] success.")
   }
 
   /**

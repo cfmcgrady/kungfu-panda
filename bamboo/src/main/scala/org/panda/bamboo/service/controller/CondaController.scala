@@ -1,13 +1,14 @@
 package org.panda.bamboo.service.controller
 
 import java.nio.file.{Files, Paths}
-import java.util.Base64
+import java.util.{Base64, HashMap => JMap}
 
 import scala.util.control.NonFatal
 
 import org.apache.catalina.servlet4preview.http.HttpServletRequest
 import org.apache.spark.panda.utils.Conda
 import org.panda.bamboo.util.{CacheKey, CacheManager}
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
 import org.springframework.web.bind.annotation.{PathVariable, PostMapping, RequestBody, RequestMapping, RequestMethod, RequestParam, RestController}
@@ -21,6 +22,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 @RestController
 @RequestMapping(value = Array("/api/v1/conda"))
 class CondaController {
+
+  private val logger = LoggerFactory.getLogger(getClass.getCanonicalName)
 
   /**
    * post method for createAndGet.
@@ -136,14 +139,15 @@ class CondaController {
     Response(data = Map("result" -> Base64.getEncoder.encodeToString(yaml.getBytes("utf-8"))))
   }
 
-  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.GET, RequestMethod.POST))
-  def remove(@PathVariable runid: String): Response = {
+  @RequestMapping(value = Array("/admin/remove/{md5}"), method = Array(RequestMethod.DELETE))
+  def remove(@PathVariable md5: String): Response = {
     try {
-      CacheManager.remove(key(runid))
+      CacheManager.remove(CacheKey(md5, new JMap[String, Object]()))
       Response()
     } catch {
-      case e: Exception =>
-        Response(stat = false, message = e.getMessage)
+      case t: Throwable =>
+        logger.error(s"catch an exception when remove environment $md5", t)
+        Response(stat = false, message = t.getMessage)
     }
   }
 

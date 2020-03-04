@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.io.FileUtils
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.panda.utils.{CompressUtil, Conda, MLFlowMinioUtilImpl, MLFlowUtil, SFTPUtil, Util}
 
@@ -31,6 +32,8 @@ trait CacheEntity[T] {
     try {
       delete
         _cacheValid.set(false)
+    } catch {
+      case t: Throwable => throw t
     } finally {
       _lock.writeLock().unlock()
     }
@@ -67,15 +70,18 @@ class PythonEnvironmentCacheEntity (
      name: String,
      configuration: JMap[String, Object]) extends CacheEntity[String] {
 
+  import CacheManager._
+
   val logger = LogFactory.getLog(this.getClass)
 
+  val envRootPath: String = basePath + File.separator + name
+
   private def downloadAndPackage(): Unit = {
-    import CacheManager._
     if (!(Paths.get(basePath, Array(name): _*).toFile.exists() &&
       Paths.get(basePath, Array(name, s"${name}.tgz"): _*).toFile.exists())) {
       logger.info("env not found, begin download from internet.")
       // the environment has never been download before, so we download this package now.
-      val envpath = Conda.createEnv(name, configuration, basePath + File.separator + name)
+      val envpath = Conda.createEnv(name, configuration, envRootPath)
 
       // make python command executable.
       val makeExecutable = {
@@ -95,7 +101,10 @@ class PythonEnvironmentCacheEntity (
 
   override protected def read: String = name
 
-  override def delete: Unit = throw new UnsupportedOperationException("")
+  override def delete: Unit = {
+    FileUtils.deleteDirectory(new File(envRootPath))
+//    Util.recursiveDeleteFile(envRootPath)
+  }
 
   /**
    * .
@@ -165,16 +174,7 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String]
   override protected def read: String = compressFilePath(runid)
 
   override def delete: Unit = {
-    try {
-      Util.recursiveListFiles(Paths.get(resolvedRunPath).toFile)
-          .foreach(f => {
-            Files.deleteIfExists(f.toPath)
-          })
-      Files.deleteIfExists(Paths.get(resolvedRunPath))
-    } catch {
-      case e: IOException =>
-        logger.info(s"remove run $runid failed!", e)
-    }
+    Util.recursiveDeleteFile(resolvedRunPath)
   }
 
   private def resolveURI(path: String): URI = {

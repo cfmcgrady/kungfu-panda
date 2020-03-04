@@ -6,16 +6,14 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.catalyst.parser.CreateFunctionParser.ExtensionsBuilder
 import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
-import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, AstBuilder, ParseException, ParserInterface, SqlBaseParser}
 import org.apache.spark.sql.catalyst.parser.ParserUtils._
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser.{CreateFunctionContext, QualifiedNameContext}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.ChangePythonUDFStrategy
-import org.apache.spark.sql.catalyst.trees.Origin
 import org.apache.spark.sql.execution.SparkSqlAstBuilder
 import org.apache.spark.sql.execution.command.{CreateFunctionCommand, CreateMLFlowFunctionCommand}
-import org.apache.spark.sql.execution.python.{AddOneRowRelationSchema}
+import org.apache.spark.sql.execution.python.OneRowRelationToLocalRelation
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 
 /**
@@ -44,7 +42,9 @@ class PandaSparkExtensions extends ExtensionsBuilder {
   override def apply(sessionExtensions: SparkSessionExtensions): Unit = {
     sessionExtensions.injectParser((_, _) => new CreateFunctionParser(new SQLConf))
     sessionExtensions.injectPlannerStrategy(_ => new ChangePythonUDFStrategy)
-    sessionExtensions.injectResolutionRule(_ => new AddOneRowRelationSchema)
+//    sessionExtensions.injectOptimizerRule(_ => new OneRowRelationToLocalRelation)
+//    sessionExtensions.injectPostHocResolutionRule(_ => new OneRowRelationToLocalRelation)
+    sessionExtensions.injectResolutionRule(_ => new OneRowRelationToLocalRelation)
   }
 }
 

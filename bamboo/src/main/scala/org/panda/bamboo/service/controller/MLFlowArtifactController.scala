@@ -48,7 +48,7 @@ class MLFlowArtifactController {
       .body(resource)
   }
 
-  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.GET, RequestMethod.POST))
+  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.DELETE))
   def remove(@PathVariable runid: String): Response = {
     try {
       CacheManager.remove(key(runid))

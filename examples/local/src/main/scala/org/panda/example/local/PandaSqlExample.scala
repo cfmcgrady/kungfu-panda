@@ -65,6 +65,8 @@ object PandaSqlExample {
       .appName("panda sql example")
       .master("local[4]")
       .config("spark.sql.extensions", "org.apache.spark.catalyst.parser.PandaSparkExtensions")
+      .config("spark.sql.codegen.wholeStage", "false")
+      .config("spark.sql.execution.arrow.enabled", "true")
       .config("spark.panda.bamboo.server.enable", "false")
       //      .withExtensions(CreateFunctionParser.extBuilder)
       .getOrCreate()
@@ -81,25 +83,69 @@ object PandaSqlExample {
          |         `returns` 'int'
          |""".stripMargin)
 
+    val path2 = "/Users/fchen/Project/fchen/examples/mlflow-in-action/add/mlruns/1/19131276fd084da5b0b629d62448f206/artifacts/model"
+    //    val python = "/usr/local/share/anaconda3/envs/pyspark-2.4.3/bin/python"
+    //    val path = "/Users/fchen/Project/fchen/kungfu-panda/examples/python/sklearn_kmeans/mlruns/1/e60af958648a4f7981c1195f82d82c1d/artifacts/model"
+    spark.sql(
+      s"""
+         |CREATE FUNCTION `test2` AS '909e8c3a8b504f11ac29150af83cee42' USING
+         |         `type` 'mlflow',
+         |         `modelLocalPath` '$path2',
+         |         `pythonExec` '$python',
+         |         `returns` 'int'
+         |""".stripMargin)
+
+    val dd: Int => Int = (i: Int) => i + 11
+    spark.udf.register("dd", dd)
+
+    val ff: Int => Int = (i: Int) => i + 13
+    spark.udf.register("ff", ff)
+
+//   spark.sql(
+//      """
+//        |select ff(y) from (
+//        |select dd(x) as y from (
+//        |select 1223 as x, 13334
+//        |))
+//        |""".stripMargin)
+//      .explain(true)
+
+//    val df = spark.sql(
+//      """
+//        |select current_date()
+//        |""".stripMargin)
+
     val df = spark.sql(
       """
-        |select *,test(x) from (
-        |select 1223 as x, 13334
+        |select test(x) from (
+        |select 5 as x
         |)
-        |""".stripMargin)
-//      .show()
+        |""".stripMargin
+    )
     df.explain(true)
+    df.show()
+
+//    val df = spark.sql(
+//      """
+//        |select test2(y) from (
+//        |select test(x) as y from (
+//        |select 1223 as x, 13334
+//        |))
+//        |""".stripMargin)
+//    df.explain(true)
+//    df.show()
     println("------------")
 //    spark.sql("select 1").explain(true)
     import spark.implicits._
-    Seq(
-      (11, 22),
-      (33, 44)
-    ).toDF("x", "y")
-      .repartition(1)
-      .selectExpr("test(x)")
-      .explain(true)
-    df.show
+//    val df = Seq(
+//      (11, 22),
+//      (33, 44)
+//    ).toDF("x", "y")
+//      .repartition(1)
+//      .selectExpr("*", "test(x)", "test2(y)", "test(x)")
+//    df.explain(true)
+//    df.show
+//    df.show
 //    spark.sql(
 //      """
 //        |select x + 1 from (
@@ -117,6 +163,17 @@ object PandaSqlExample {
         |select 1223 as x, 13334 as y
         |)
         |""".stripMargin
-    //      .show()
+
+    val sql2 =
+      """
+        |select *,x from (
+        |select 1223 as x, 13334
+        |)
+        |""".stripMargin
+
+    val sql3 =
+      """
+        |select test(5)
+        |""".stripMargin
   }
 }
