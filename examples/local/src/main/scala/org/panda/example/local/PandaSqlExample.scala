@@ -1,3 +1,4 @@
+// scalastyle:off
 package org.panda.example.local
 
 import java.io.{File, FileInputStream}
@@ -13,7 +14,6 @@ import org.apache.spark.sql.types.StringType
  * @time 2019-09-05 14:59
  * @author fchen <cloud.chenfu@gmail.com>
  */
-// scalastyle:off
 object PandaSqlExample {
   def main(args: Array[String]): Unit = {
 //
@@ -95,11 +95,11 @@ object PandaSqlExample {
          |         `returns` 'int'
          |""".stripMargin)
 
-    val dd: Int => Int = (i: Int) => i + 11
-    spark.udf.register("dd", dd)
-
-    val ff: Int => Int = (i: Int) => i + 13
-    spark.udf.register("ff", ff)
+//    val dd: Int => Int = (i: Int) => i + 11
+//    spark.udf.register("dd", dd)
+//
+//    val ff: Int => Int = (i: Int) => i + 13
+//    spark.udf.register("ff", ff)
 
 //   spark.sql(
 //      """

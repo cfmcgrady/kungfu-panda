@@ -13,7 +13,9 @@
     <packaging>pom</packaging>
 
     <properties>
-        <build.lib.path>${project.parent.basedir}/libs</build.lib.path>
+        <!-- the target module to package, the default value is *, means package all sub-modules. -->
+        <assembly.format>tgz</assembly.format>
+        <assembly.target.module>*</assembly.target.module>
     </properties>
 
     <build>
@@ -25,11 +27,10 @@
                 <version>3.0.0</version>
                 <configuration>
                     <descriptors>
-                        <descriptor>${project.basedir}/src/main/assembly/assembly.xml
-                        </descriptor>
+                        <descriptor>${project.basedir}/src/main/assembly/assembly.xml</descriptor>
                     </descriptors>
                     <outputDirectory>
-                        ${project.basedir}
+                        ${project.parent.basedir}
                     </outputDirectory>
                 </configuration>
                 <executions>
