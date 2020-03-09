@@ -1,4 +1,4 @@
-FROM registry.uc.host.dxy/dxy/maven-conda
+FROM registry.uc.host.dxy/library/maven-conda
 
 # Define working directory.
 WORKDIR /work
