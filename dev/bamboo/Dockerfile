@@ -12,10 +12,10 @@ ENV CONDA_PATH /opt/conda/bin/conda
 ENV MLFLOW_TRACKING_URI http://mlflow.k8s.uc.host.dxy/
 
 # package
-RUN mvn -Psingle-jar -am -pl bamboo clean package -DskipTests
+RUN mvn -gs settings.xml clean package -DskipTests -Passembly -Dassembly.target.module=kungfu-panda-bamboo -Dassembly.format=dir
 
 # clear maven cache.
 RUN rm -rf ~/.m2
 
 # Define default command.
-ENTRYPOINT java -Xmx4g -XX:+UseG1GC -Dserver.port=8100 -cp bamboo/target/kungfu-panda-bamboo-1.0-shaded.jar org.panda.bamboo.service.Application
+ENTRYPOINT bash kungfu-panda-bin-1.0/kungfu-panda/bootstrap.sh run -Xmx4g -XX:+UseG1GC -Dserver.port=8100 org.panda.bamboo.service.Application
