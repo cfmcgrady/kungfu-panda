@@ -6,6 +6,19 @@ WORKDIR /work
 # Prepare download dependencies
 ADD . /work/
 
+# setup conda and pip proxy.
+RUN echo 'default_channels:\n\
+  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/msys2/\n\
+  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/pro/\n\
+  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/r/\n\
+  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/free/\n\
+  - http://nexus.k8s.uc.host.dxy/repository/anaconda/pkgs/main/' > ~/.condarc
+
+RUN mkdir ~/.pip
+RUN echo '[global]\n\
+index-url = http://nexus.k8s.uc.host.dxy/repository/pypi-aliyun/simple\n\
+trusted-host=nexus.k8s.uc.host.dxy' > ~/.pip/pip.conf
+
 ENV LANG C.UTF-8
 ENV MALLOC_ARENA_MAX 4
 ENV CONDA_PATH /opt/conda/bin/conda
