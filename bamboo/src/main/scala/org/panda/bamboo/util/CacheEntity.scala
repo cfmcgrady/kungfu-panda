@@ -79,7 +79,7 @@ class PythonEnvironmentCacheEntity (
 
   private def downloadAndPackage(): Unit = {
     if (!resolvedEnvRootPath.toFile.exists() &&
-      PythonEnvironmentResolvedPath.compressFilePath(name).toFile.exists()) {
+      !PythonEnvironmentResolvedPath.compressFilePath(name).toFile.exists()) {
       logger.info("env not found, begin download from internet.")
       // the environment has never been download before, so we download this package now.
       val envpath = Conda.createEnv(name, configuration, resolvedEnvRootPath.toString)
