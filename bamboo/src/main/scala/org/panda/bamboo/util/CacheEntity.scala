@@ -11,6 +11,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.io.FileUtils
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.panda.utils.{CompressUtil, Conda, MLFlowMinioUtilImpl, MLFlowUtil, SFTPUtil, Util}
+import org.panda.Config
 
 /**
  * @time 2019-09-12 16:48
@@ -74,14 +75,14 @@ class PythonEnvironmentCacheEntity (
 
   val logger = LogFactory.getLog(this.getClass)
 
-  val envRootPath: String = basePath + File.separator + name
+  val resolvedEnvRootPath: Path = PythonEnvironmentResolvedPath.resolveEnvPath(name)
 
   private def downloadAndPackage(): Unit = {
-    if (!(Paths.get(basePath, Array(name): _*).toFile.exists() &&
-      Paths.get(basePath, Array(name, s"${name}.tgz"): _*).toFile.exists())) {
+    if (!resolvedEnvRootPath.toFile.exists() &&
+      PythonEnvironmentResolvedPath.compressFilePath(name).toFile.exists()) {
       logger.info("env not found, begin download from internet.")
       // the environment has never been download before, so we download this package now.
-      val envpath = Conda.createEnv(name, configuration, envRootPath)
+      val envpath = Conda.createEnv(name, configuration, resolvedEnvRootPath.toString)
 
       // make python command executable.
       val makeExecutable = {
@@ -102,7 +103,7 @@ class PythonEnvironmentCacheEntity (
   override protected def read: String = name
 
   override def delete: Unit = {
-    FileUtils.deleteDirectory(new File(envRootPath))
+    FileUtils.deleteDirectory(PythonEnvironmentResolvedPath.resolveEnvPath(name).toFile)
 //    Util.recursiveDeleteFile(envRootPath)
   }
 
@@ -199,7 +200,7 @@ class MLFlowRunCacheEntity(runid: String) extends CacheEntity[String]
 
 trait ResolvedPath {
   self: MLFlowRunCacheEntity =>
-  private lazy val BASE_PATH = sys.env.getOrElse("panda.cache.dir", "/tmp/panda/runs")
+  private lazy val BASE_PATH = sys.env.getOrElse("panda.cache.dir", s"${Config.CACHE_ROOT_DIR}/panda/runs")
 
   /**
    * the root cache path of this run.
@@ -212,5 +213,17 @@ trait ResolvedPath {
   val compressFilePath = {
     runid: String => s"${resolveRunPath(runid)}/${runid}.tgz"
   }
+
+}
+
+object PythonEnvironmentResolvedPath {
+  //  // TODO:(fchen) generate base path with server info(hostname: port).
+  //  // so that we can deploy multi server on the same host.
+  //  val basePath = Config.CACHE_ROOT_DIR
+  private lazy val BASE_PATH = s"${Config.CACHE_ROOT_DIR}/conda"
+
+  val resolveEnvPath = (name: String) => Paths.get(BASE_PATH, Array(name): _*)
+
+  val compressFilePath = (name: String) => Paths.get(BASE_PATH, Array(name, s"${name}.tgz"): _*)
 
 }

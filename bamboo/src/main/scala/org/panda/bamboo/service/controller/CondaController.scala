@@ -7,7 +7,8 @@ import scala.util.control.NonFatal
 
 import org.apache.catalina.servlet4preview.http.HttpServletRequest
 import org.apache.spark.panda.utils.Conda
-import org.panda.bamboo.util.{CacheKey, CacheManager}
+import org.panda.bamboo.util.{CacheKey, CacheManager, PythonEnvironmentResolvedPath}
+import org.panda.Config
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
@@ -38,7 +39,7 @@ class CondaController {
     println(yaml)
     // scalastyle:on
     val name = CacheManager.get(key(yaml))
-    val resource = new UrlResource(CacheManager.getFileByName(name).toUri)
+    val resource = new UrlResource(PythonEnvironmentResolvedPath.compressFilePath(name).toUri)
 
     var contentType = ""
 
@@ -108,7 +109,7 @@ class CondaController {
   def directGet(@PathVariable filename: String,
                 request: HttpServletRequest): ResponseEntity[Resource] = {
 
-    val file = s"file:///tmp/cache/${filename}/${filename}.tgz"
+    val file = s"file://${Config.CACHE_ROOT_DIR}/${filename}/${filename}.tgz"
     val resource = new UrlResource(file)
     var contentType = ""
     try {

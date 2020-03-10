@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.juli.logging.LogFactory
 import org.apache.spark.panda.utils.Conda
+import org.panda.Config
 
 /**
  * @time 2019-08-29 14:33
@@ -51,17 +52,6 @@ object CacheManager {
         _cache.invalidate(key)
     }
   }
-
-  /**
-   * get the tar archive file path by environment name.
-   */
-  def getFileByName(name: String): Path = {
-    Paths.get(basePath, Array(name, s"${name}.tgz"): _*)
-  }
-
-  // TODO:(fchen) generate base path with server info(hostname: port).
-  // so that we can deploy multi server on the same host.
-  val basePath = "/tmp/cache"
 
   private def withLock[T](f: T): T = {
     _lock.lock()
