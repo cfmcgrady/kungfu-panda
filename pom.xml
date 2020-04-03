@@ -44,7 +44,7 @@
         <build.lib.path>${project.basedir}/libs</build.lib.path>
         <spark.version>2.4.3</spark.version>
         <spark.scope>provided</spark.scope>
-        <jackson.version>2.9.10</jackson.version>
+        <jackson.version>2.10.3</jackson.version>
         <skipTests>false</skipTests>
     </properties>
 
