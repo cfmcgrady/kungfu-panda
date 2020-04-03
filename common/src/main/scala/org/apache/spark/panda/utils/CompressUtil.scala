@@ -15,7 +15,6 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
  * @author fchen <cloud.chenfu@gmail.com>
  */
 object CompressUtil {
-
   def zip(sourceDirectory: String, targetZipFile: String): Unit = {
     val p = Files.createFile(Paths.get(targetZipFile))
     val zs = new ZipOutputStream(Files.newOutputStream(p))
@@ -58,12 +57,13 @@ object CompressUtil {
           case file =>
             val path = file.toPath
             val tarEntry = new TarArchiveEntry(path.toFile, sourceDirectoryPath.getParent.relativize(path).toString())
-            action(path, tarEntry)
-            taos.putArchiveEntry(tarEntry)
-//            val in = new FileInputStream(path.toFile)
-            Files.copy(path, taos)
-//            IOUtils.copy(in, taos)
-            taos.closeArchiveEntry()
+            try {
+              action(path, tarEntry)
+              taos.putArchiveEntry(tarEntry)
+              Files.copy(path, taos)
+            } finally {
+              taos.closeArchiveEntry()
+            }
         }
     } catch {
       case e: Exception =>
@@ -79,12 +79,6 @@ object CompressUtil {
 
   def tar2(sourceDirectory: String, targetTarFile: String): Unit = {
     GZIPUtil.createTarArchive(sourceDirectory, targetTarFile)
-  }
-
-  def tar3(): Unit = {
-    Process(
-      "tar czf "
-    )
   }
 
   @throws(classOf[IOException])

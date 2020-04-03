@@ -1,16 +1,33 @@
 <assembly>
     <id>bin-${project.version}</id>
     <formats>
-        <format>tgz</format>
+        <format>${assembly.format}</format>
     </formats>
-    <fileSets>
-        <fileSet>
-            <directory>${project.parent.basedir}/conf</directory>
-            <outputDirectory>conf</outputDirectory>
+    <moduleSets>
+        <moduleSet>
+            <!-- Enable access to all projects in the current multimodule build! -->
+            <useAllReactorProjects>true</useAllReactorProjects>
+            <!-- Now, select which projects to include in this module-set. -->
             <includes>
-                <include>**/*</include>
+<!--                <include>org.panda:kungfu-panda-bamboo</include>-->
+                <include>org.panda:${assembly.target.module}</include>
             </includes>
-        </fileSet>
+            <binaries>
+                <outputDirectory>libs</outputDirectory>
+                <unpack>${assembly.unpack}</unpack>
+<!--                <dependencySets>-->
+<!--                    <dependencySet>-->
+<!--                        <excludes>-->
+<!--                            <exclude>org.apache.hbase:hbase-client:jar</exclude>-->
+<!--                            <exclude>org.apache.hbase:hbase-common:jar</exclude>-->
+<!--                        </excludes>-->
+<!--                    </dependencySet>-->
+<!--                </dependencySets>-->
+            </binaries>
+        </moduleSet>
+    </moduleSets>
+
+    <fileSets>
         <fileSet>
             <directory>${project.parent.basedir}</directory>
             <outputDirectory>.</outputDirectory>
@@ -20,8 +37,8 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.parent.basedir}/libs</directory>
-            <outputDirectory>libs</outputDirectory>
+            <directory>${project.parent.basedir}/conf</directory>
+            <outputDirectory>conf</outputDirectory>
             <includes>
                 <include>**/*</include>
             </includes>

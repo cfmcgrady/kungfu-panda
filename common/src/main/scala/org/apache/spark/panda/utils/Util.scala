@@ -1,7 +1,7 @@
 package org.apache.spark.panda.utils
 
-import java.io.File
-import java.nio.file.{Path, Paths}
+import java.io.{File, IOException}
+import java.nio.file.{Files, Path, Paths}
 import java.security.MessageDigest
 
 /**
@@ -51,11 +51,27 @@ object Util {
     these ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
   }
 
+  @throws(classOf[IOException])
+  def recursiveDeleteFile(path: String): Unit = {
+    recursiveListFiles(Paths.get(path).toFile)
+      .foreach(f => {
+        Files.deleteIfExists(f.toPath)
+      })
+    Files.deleteIfExists(Paths.get(path))
+  }
+
   def stringToMD5(string: String): String = {
     MessageDigest.getInstance("MD5")
       .digest(string.getBytes("UTF-8"))
       .map("%02x".format(_))
       .mkString
+  }
+
+  def mkdir(path: String): Unit = {
+    val p = Paths.get(path)
+    if (!Files.exists(p)) {
+      Files.createDirectories(p)
+    }
   }
 
 

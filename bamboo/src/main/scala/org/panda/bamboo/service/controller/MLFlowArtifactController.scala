@@ -2,8 +2,8 @@ package org.panda.bamboo.service.controller
 
 import java.net.URI
 import java.nio.file.Paths
-
 import javax.servlet.http.HttpServletRequest
+
 import org.panda.bamboo.util.{CacheManager, MLFlowRunCacheKey}
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
@@ -48,7 +48,7 @@ class MLFlowArtifactController {
       .body(resource)
   }
 
-  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.GET, RequestMethod.POST))
+  @RequestMapping(value = Array("/admin/remove/{runid}"), method = Array(RequestMethod.DELETE))
   def remove(@PathVariable runid: String): Response = {
     try {
       CacheManager.remove(key(runid))

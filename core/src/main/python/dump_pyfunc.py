@@ -13,6 +13,20 @@ return_type = _parse_datatype_json_string(sys.argv[2])
 print("function return type: " + str(return_type))
 archive_path = sys.argv[3]
 
+class ModelCache(object):
+    _models = {}
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_or_load(archive_path):
+        if archive_path in ModelCache._models:
+            return ModelCache._models[archive_path]
+        from mlflow.pyfunc import load_pyfunc
+        ModelCache._models[archive_path] = load_pyfunc(archive_path)
+        return ModelCache._models[archive_path]
+
 def predict(*args):
     import pandas
     from mlflow.pyfunc.spark_model_cache import SparkModelCache
@@ -30,11 +44,12 @@ def predict(*args):
             message="Invalid result_type '{}'. Result type can only be one of or an array of one "
                     "of the following types types: {}".format(str(elem_type), str(supported_types)),
             error_code=INVALID_PARAMETER_VALUE)
-    model = SparkModelCache.get_or_load(archive_path)
+    # model = SparkModelCache.get_or_load(archive_path)
     # model = load_pyfunc(archive_path)
-    schema = {str(i): arg for i, arg in enumerate(args)}
+    model = ModelCache.get_or_load(archive_path)
+    schema = {series.name: series for i, series in enumerate(args)}
     # Explicitly pass order of columns to avoid lexicographic ordering (i.e., 10 < 2)
-    columns = [str(i) for i, _ in enumerate(args)]
+    columns = [series.name for i, series in enumerate(args)]
     pdf = pandas.DataFrame(schema, columns=columns)
     # model.predict(pdf)
     result = model.predict(pdf)

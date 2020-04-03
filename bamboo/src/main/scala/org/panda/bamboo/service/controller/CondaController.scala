@@ -1,15 +1,20 @@
 package org.panda.bamboo.service.controller
 
-import java.util.Base64
+import java.nio.file.{Files, Paths}
+import java.util.{Base64, HashMap => JMap}
 
 import scala.util.control.NonFatal
 
 import org.apache.catalina.servlet4preview.http.HttpServletRequest
 import org.apache.spark.panda.utils.Conda
-import org.panda.bamboo.util.{CacheKey, CacheManager}
+import org.panda.bamboo.util.{CacheKey, CacheManager, PythonEnvironmentResolvedPath}
+import org.panda.Config
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.{Resource, UrlResource}
 import org.springframework.http.{HttpHeaders, MediaType, ResponseEntity}
-import org.springframework.web.bind.annotation.{PathVariable, RequestBody, RequestMapping, RequestMethod, RequestParam, RestController}
+import org.springframework.web.bind.annotation.{PathVariable, PostMapping, RequestBody, RequestMapping, RequestMethod, RequestParam, RestController}
+import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
 /**
  * @time 2019-08-30 10:23
@@ -18,6 +23,8 @@ import org.springframework.web.bind.annotation.{PathVariable, RequestBody, Reque
 @RestController
 @RequestMapping(value = Array("/api/v1/conda"))
 class CondaController {
+
+  private val logger = LoggerFactory.getLogger(getClass.getCanonicalName)
 
   /**
    * post method for createAndGet.
@@ -32,7 +39,7 @@ class CondaController {
     println(yaml)
     // scalastyle:on
     val name = CacheManager.get(key(yaml))
-    val resource = new UrlResource(CacheManager.getFileByName(name).toUri)
+    val resource = new UrlResource(PythonEnvironmentResolvedPath.compressFilePath(name).toUri)
 
     var contentType = ""
 
@@ -102,7 +109,7 @@ class CondaController {
   def directGet(@PathVariable filename: String,
                 request: HttpServletRequest): ResponseEntity[Resource] = {
 
-    val file = s"file:///tmp/cache/${filename}/${filename}.tgz"
+    val file = s"file://${Config.CACHE_ROOT_DIR}/${filename}/${filename}.tgz"
     val resource = new UrlResource(file)
     var contentType = ""
     try {
@@ -131,6 +138,38 @@ class CondaController {
   @RequestMapping(value = Array("/encode"), method = Array(RequestMethod.POST))
   def encode(@RequestBody yaml: String): Response = {
     Response(data = Map("result" -> Base64.getEncoder.encodeToString(yaml.getBytes("utf-8"))))
+  }
+
+  @RequestMapping(value = Array("/admin/remove/{md5}"), method = Array(RequestMethod.DELETE))
+  def remove(@PathVariable md5: String): Response = {
+    try {
+      CacheManager.remove(CacheKey(md5, new JMap[String, Object]()))
+      Response()
+    } catch {
+      case t: Throwable =>
+        logger.error(s"catch an exception when remove environment $md5", t)
+        Response(stat = false, message = t.getMessage)
+    }
+  }
+
+  @PostMapping(value = Array("admin/upload"))
+  def manullyUpload(@RequestParam("file") file: MultipartFile,
+                    redirectAttributes: RedirectAttributes): Unit = {
+    if (file.isEmpty()) {
+        redirectAttributes.addFlashAttribute("message", "Please select a file to upload")
+        return "redirect:uploadStatus"
+    }
+    try {
+        // Get the file and save it somewhere
+        val bytes = file.getBytes()
+        val path = Paths.get("/tmp/dd" + file.getOriginalFilename())
+        Files.write(path, bytes)
+        redirectAttributes.addFlashAttribute("message",
+                "You successfully uploaded '" + file.getOriginalFilename() + "'")
+    } catch {
+      case e => e.printStackTrace()
+    }
+    return "redirect:/uploadStatus";
   }
 
   private def key(yaml: String): CacheKey = {

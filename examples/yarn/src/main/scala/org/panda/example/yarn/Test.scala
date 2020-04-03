@@ -35,16 +35,19 @@
 //      .config(conf)
 //      .getOrCreate()
 //    val python = "/usr/local/share/anaconda3/envs/mlflow-study/bin/python"
-//    val pythonExec = Option(python)
-//    PandasFunctionManager.registerMLFlowPythonUDF(spark, functionName = "test", "",
-//      returnType = Option(IntegerType), pythonExec = pythonExec)
-//
-//    spark.sql(
-//      """
-//        |select test(x, y) from (
-//        |select 1 as x, 1 as y
-//        |)
-//        |""".stripMargin)
-//      .show()
+//    spark.sparkContext.addFile("http://192.168.218.12:8080/api/v1/test/kp")
+////    val pythonExec = Option(python)
+////    PandasFunctionManager.registerMLFlowPythonUDF(spark, functionName = "test", "",
+////      returnType = Option(IntegerType), pythonExec = pythonExec)
+////
+////    spark.sql(
+////      """
+////        |select test(x, y) from (
+////        |select 1 as x, 1 as y
+////        |)
+////        |""".stripMargin)
+////      .show()
+//    spark.sql("select 1").show()
+//    Thread.sleep(Int.MaxValue)
 //  }
 //}

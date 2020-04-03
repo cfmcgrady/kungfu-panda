@@ -21,6 +21,19 @@
             </snapshots>
         </repository>
     </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun</id>
+            <name>Nexus Release Repository</name>
+            <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <properties>
         <java-version>1.8</java-version>
@@ -31,6 +44,7 @@
         <build.lib.path>${project.basedir}/libs</build.lib.path>
         <spark.version>2.4.3</spark.version>
         <spark.scope>provided</spark.scope>
+        <jackson.version>2.10.3</jackson.version>
         <skipTests>false</skipTests>
     </properties>
 
@@ -39,6 +53,14 @@
             <id>local</id>
             <properties>
                 <spark.scope>compile</spark.scope>
+            </properties>
+        </profile>
+        <profile>
+            <id>spark-3.0</id>
+            <properties>
+                <spark.version>3.0.0-preview2</spark.version>
+                <scala.binary.version>2.12</scala.binary.version>
+                <scala.version>2.12.10</scala.version>
             </properties>
         </profile>
         <profile>
@@ -81,6 +103,12 @@
                 </pluginManagement>
             </build>
         </profile>
+        <profile>
+            <id>assembly</id>
+            <modules>
+                <module>assembly</module>
+            </modules>
+        </profile>
     </profiles>
 
     <build>
@@ -89,26 +117,26 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.0.2</version>
-                <configuration>
-                    <outputDirectory>${build.lib.path}</outputDirectory>
-                </configuration>
+<!--                <configuration>-->
+<!--                    <outputDirectory>${build.lib.path}</outputDirectory>-->
+<!--                </configuration>-->
             </plugin>
-            <plugin>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.0.1</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <excludeScope>provided</excludeScope>
-                            <outputDirectory>${build.lib.path}</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+<!--            <plugin>-->
+<!--                <artifactId>maven-dependency-plugin</artifactId>-->
+<!--                <version>3.0.1</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <phase>package</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>copy-dependencies</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <excludeScope>provided</excludeScope>-->
+<!--                            <outputDirectory>${build.lib.path}</outputDirectory>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -176,31 +204,31 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.scalastyle</groupId>
-                <artifactId>scalastyle-maven-plugin</artifactId>
-                <version>0.8.0</version>
-                <configuration>
-                    <verbose>false</verbose>
-                    <failOnViolation>true</failOnViolation>
-                    <includeTestSourceDirectory>false</includeTestSourceDirectory>
-                    <failOnWarning>false</failOnWarning>
-                    <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
-                    <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
-                    <configLocation>scalastyle-config.xml</configLocation>
-                    <outputFile>${basedir}/target/scalastyle-output.xml</outputFile>
-                    <inputEncoding>${project.build.sourceEncoding}</inputEncoding>
-                    <outputEncoding>${project.reporting.outputEncoding}</outputEncoding>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>org.scalastyle</groupId>-->
+<!--                <artifactId>scalastyle-maven-plugin</artifactId>-->
+<!--                <version>0.8.0</version>-->
+<!--                <configuration>-->
+<!--                    <verbose>false</verbose>-->
+<!--                    <failOnViolation>true</failOnViolation>-->
+<!--                    <includeTestSourceDirectory>false</includeTestSourceDirectory>-->
+<!--                    <failOnWarning>false</failOnWarning>-->
+<!--                    <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>-->
+<!--                    <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>-->
+<!--                    <configLocation>scalastyle-config.xml</configLocation>-->
+<!--                    <outputFile>${basedir}/target/scalastyle-output.xml</outputFile>-->
+<!--                    <inputEncoding>${project.build.sourceEncoding}</inputEncoding>-->
+<!--                    <outputEncoding>${project.reporting.outputEncoding}</outputEncoding>-->
+<!--                </configuration>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <phase>package</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>check</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
             <plugin>
                 <artifactId>maven-clean-plugin</artifactId>
                 <version>3.0.0</version>
@@ -272,6 +300,26 @@
                 <version>${spark.version}</version>
                 <scope>${spark.scope}</scope>
             </dependency>
+            <dependency>
+                <groupId>org.mlflow</groupId>
+                <artifactId>mlflow-client</artifactId>
+                <version>1.4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>6.0.11</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-scala_${scala.binary.version}</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <dependencies>
@@ -279,7 +327,6 @@
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.binary.version}</artifactId>
             <version>3.0.3</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
@@ -293,6 +340,5 @@
         <module>bamboo</module>
         <module>examples/local</module>
         <module>examples/yarn</module>
-        <module>assembly</module>
     </modules>
 </project>

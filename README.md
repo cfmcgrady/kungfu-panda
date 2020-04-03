@@ -1,73 +1,19 @@
-# Kungfu Panda
-**Kungfu Panda** is a library for register python pandas UDFs in Spark SQL.
+# Bamboo
 
-# Quick Start
+Spark运行MLFlow模型的缓存组件
 
-1. download project.
+# 环境变量依赖
+
+构建docker镜像和部署服务都需要依赖相关的环境变量。
+
+| 环境变量 | 说明 |
+| --- | --- |
+| AWS_ACCESS_KEY_ID | minio访问id，需要有mlflow的bucket权限|
+| AWS_SECRET_ACCESS_KEY | minio访问key，需要有mlflow的bucket权限|
+| MLFLOW_S3_ENDPOINT_URL | minio地址，外部测试时候使用http://minio.k8s.uc.host.dxy，部署到k8s的时候需要内部域名 |
+| BAMBOO_CACHE_DIR | 缓存根路径，默认为/tmp/cache |
+
+build docker image:
+```shell
+docker build -t bamboo -f dev/bamboo/Dockerfile .
 ```
-git clone https://github.com/cfmcgrady/kungfu-panda.git
-```
-
-2. install python environment by conda.
-```
-conda env create -f path/to/conda.yaml -p /tmp/kungfu-panda
-```
-
-3. train a Kmean classify model with mlflow.
-```
-/tmp/kungfu-panda/bin/python path/to/train.py
-```
-
-4. register model.
-```scala
-    val spark = SparkSession
-      .builder()
-      .appName("kungfu panda example")
-      .master("local[4]")
-      .getOrCreate()
-
-    val python = "/tmp/kungfu-panda/bin/python"
-    val artifactRoot = "."
-    // find run id with mlflow.
-    val runid = "9c6c59d0f57f40dfbbded01816896687"
-    val pythonExec = Option(python)
-    PandasFunctionManager.registerMLFlowPythonUDF(
-      spark, "test",
-      returnType = Option(IntegerType),
-      artifactRoot = Option(artifactRoot),
-      runId = runid,
-      driverPythonExec = pythonExec,
-      driverPythonVer = None,
-      pythonExec = pythonExec,
-      pythonVer = None)
-    spark.sql(
-      """
-        |select test(x, y) from (
-        |select 1 as x, 1 as y
-        |)
-        |""".stripMargin)
-      .show()
-```
-
-# Register Function With Spark SQL
-
-1. add parser extensions when we create `SparkSession`
-```scala
-val spark = SparkSession
-  .builder()
-  .appName("panda sql example")
-  .master("local[4]")
-  .withExtensions(CreateFunctionParser.extBuilder)
-  .getOrCreate()
-```
-
-2. register mlflow function.
-```sql
-CREATE FUNCTION `test` AS '${runid}' USING `type` 'mlflow', `returns` 'integer', `artifactRoot` '${artifactRoot}', `pythonExec` '${python}'
-```
-
-visit [PandaSqlExample](./examples/local/src/main/scala/org/panda/example/local/PandaSqlExample.scala) for full example.
-
-# Run On Yarn Cluster
-
-// todo

@@ -38,18 +38,17 @@ object PandasFunctionManager {
   }
 
   def registerMLFlowPythonUDFLocal(spark: SparkSession,
-                              functionName: String,
-                              modelLocalPath: String,
-                              returnType: Option[DataType] = None,
-                              driverPythonExec: Option[String] = None,
-                              driverPythonVer: Option[String] = None,
-                              pythonExec: Option[String] = None,
-                              pythonVer: Option[String] = None
-                             ): Unit = {
-    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
+                                   functionName: String,
+                                   modelLocalPath: String,
+                                   returnType: Option[DataType] = None,
+                                   driverPythonExec: Option[String] = None,
+                                   driverPythonVer: Option[String] = None,
+                                   pythonExec: Option[String] = None,
+                                   pythonVer: Option[String] = None): Unit = {
+//    val modelPath = SparkModelCache.addLocalModel(spark, modelLocalPath)
     val funcSerPath = Utils.createTempDir().getPath + File.separator + "dump_func"
     writeBinaryPythonFunc(
-      funcSerPath, modelPath, returnType.getOrElse(IntegerType),
+      funcSerPath, modelLocalPath, returnType.getOrElse(IntegerType),
       driverPythonExec.getOrElse("python")
     )
     registerPythonUDF(spark, funcSerPath, functionName, returnType, pythonExec, pythonVer)
