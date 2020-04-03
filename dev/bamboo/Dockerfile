@@ -24,6 +24,8 @@ ENV MALLOC_ARENA_MAX 4
 ENV CONDA_PATH /opt/conda/bin/conda
 ENV MLFLOW_TRACKING_URI http://mlflow.k8s.uc.host.dxy/
 
+RUN apt-get update && apt-get install -y git
+
 # package
 RUN mvn -gs settings.xml clean package -DskipTests -Passembly -Dassembly.target.module=kungfu-panda-bamboo -Dassembly.format=dir
 
